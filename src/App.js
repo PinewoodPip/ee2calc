@@ -292,98 +292,6 @@ class App extends React.Component {
 
     console.log("--- Best Build ---")
     console.log(bestBuild);
-
-    // --------- HELPER FUNCTIONS ------------
-
-    function getTotalPoints(build) {
-      var points = 0;
-      for (var x = 0; x < build.length; x++) {
-        points += build[x].nodes;
-      }
-    }
-
-    function mergeIntoObject(build, aspect) {
-      var newList = {};
-      for (var x = 0; x < build.length; x++) {
-        newList[x] = build[x];
-      }
-      newList[aspect.id] = aspect;
-
-      return newList;
-    }
-
-    function randomProp(obj) {
-      var keys = Object.keys(obj);
-      return obj[keys[ keys.length * Math.random() << 0]];
-    };
-
-    function getTotalReqs(aspects) {
-      var embodiments = {
-        force: 0,
-        entropy: 0,
-        form: 0,
-        inertia: 0,
-        life: 0,
-      };
-
-      for (var x in aspects) {
-        var aspect = aspects[x];
-
-        for (var z in aspect.requirements) {
-          if (aspect.requirements[z] > embodiments[z])
-            embodiments[z] = aspect.requirements[z]
-        }
-      }
-
-      return embodiments;
-    }
-
-    function getTotalRewards(aspects) {
-      var rewards = {
-        force: 0,
-        entropy: 0,
-        form: 0,
-        inertia: 0,
-        life: 0,
-      };
-
-      for (var x in aspects) {
-        //console.log(x) // this prints the property names of an aaspect...
-        var aspect = aspects[x];
-
-        for (var r in aspect.rewards) {
-          rewards[r] += aspect.rewards[r];
-        }
-      }
-
-      return rewards;
-    }
-
-    // previously we were checking the reqs for the build WITH THE ASPECT ALREADY IN. dont do that
-    function fullfillsRequirements(build, aspect) {
-      var embodiments = getTotalRewards(build);
-      var reqs = getTotalReqs(aspect);
-
-      // console.log(reqs) // erorr
-      // console.log(embodiments)
-
-      for (var e in reqs) {
-        if (embodiments[e] < reqs[e])
-          return false;
-      }
-
-      return true;
-    }
-
-    function aspectAlreadyPicked(build, aspect) {
-      for (var x = 0; x < build.length; x++) {
-        //console.log(aspect) // odd??
-        if (build[x].id == aspect.id)
-          return true;
-      }
-
-      return false;
-    }
   }
 
   updateSelection(aspect, e) {
@@ -476,6 +384,98 @@ class App extends React.Component {
       </div>
     )
   };
+}
+
+// --------- HELPER FUNCTIONS ------------
+
+function getTotalPoints(build) {
+  var points = 0;
+  for (var x = 0; x < build.length; x++) {
+    points += build[x].nodes;
+  }
+}
+
+function mergeIntoObject(build, aspect) {
+  var newList = {};
+  for (var x = 0; x < build.length; x++) {
+    newList[x] = build[x];
+  }
+  newList[aspect.id] = aspect;
+
+  return newList;
+}
+
+function randomProp(obj) {
+  var keys = Object.keys(obj);
+  return obj[keys[ keys.length * Math.random() << 0]];
+};
+
+function getTotalReqs(aspects) {
+  var embodiments = {
+    force: 0,
+    entropy: 0,
+    form: 0,
+    inertia: 0,
+    life: 0,
+  };
+
+  for (var x in aspects) {
+    var aspect = aspects[x];
+
+    for (var z in aspect.requirements) {
+      if (aspect.requirements[z] > embodiments[z])
+        embodiments[z] = aspect.requirements[z]
+    }
+  }
+
+  return embodiments;
+}
+
+function getTotalRewards(aspects) {
+  var rewards = {
+    force: 0,
+    entropy: 0,
+    form: 0,
+    inertia: 0,
+    life: 0,
+  };
+
+  for (var x in aspects) {
+    //console.log(x) // this prints the property names of an aaspect...
+    var aspect = aspects[x];
+
+    for (var r in aspect.rewards) {
+      rewards[r] += aspect.rewards[r];
+    }
+  }
+
+  return rewards;
+}
+
+// previously we were checking the reqs for the build WITH THE ASPECT ALREADY IN. dont do that
+function fullfillsRequirements(build, aspect) {
+  var embodiments = getTotalRewards(build);
+  var reqs = getTotalReqs(aspect);
+
+  // console.log(reqs) // erorr
+  // console.log(embodiments)
+
+  for (var e in reqs) {
+    if (embodiments[e] < reqs[e])
+      return false;
+  }
+
+  return true;
+}
+
+function aspectAlreadyPicked(build, aspect) {
+  for (var x = 0; x < build.length; x++) {
+    //console.log(aspect) // odd??
+    if (build[x].id == aspect.id)
+      return true;
+  }
+
+  return false;
 }
 
 export default App;
