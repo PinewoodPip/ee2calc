@@ -3,6 +3,10 @@ import logo from './logo.svg';
 import './App.css';
 import _ from "lodash"
 
+const maxIterations = 100; // how many random builds are generated and compared
+const maxAspects = 15; // maximum aspects a build can have
+const pointBudget = 25; // TODO IMPLEMENT
+
 // things to consider:
 // core completion, dipping into tier 2s (auto-generate separate internal aspects to facilitate that)
 
@@ -16,6 +20,8 @@ import _ from "lodash"
 // add point limit
 // add core settings
 // add dipping
+
+// try to favor aspects with a good point to emb ratio ; for this we need to also calculate a point to emb ratio relative to the embodiments we actually want
 
 const aspects = {
   core_force: {
@@ -75,7 +81,52 @@ const aspects = {
     },
     nodes: 3,
     hasChoiceNode: false,
-  }
+  },
+  serpent: {
+    name: "Serpent",
+    id: "serpent",
+    family: "force",
+    tier: 1,
+    requirements: {
+      force: 1,
+    },
+    rewards: {
+      force: 3,
+      entropy: 1,
+    },
+    nodes: 3,
+    hasChoiceNode: false,
+  },
+  // FORCE TIER 2
+  arcanist: {
+    name: "Arcanist",
+    id: "arcanist",
+    family: "force",
+    tier: 2,
+    requirements: {
+      force: 5,
+      life: 1,
+    },
+    rewards: {
+      force: 3,
+    },
+    nodes: 5,
+    hasChoiceNode: true,
+  },
+  // LIFE TIER 1
+  core_life: {
+    name: "The Core",
+    id: "core_life",
+    family: "life",
+    tier: 1,
+    requirements: {
+    },
+    rewards: {
+      life: 1,
+    },
+    nodes: 1,
+    hasChoiceNode: false,
+  },
 }
 
 // calculate embodiments rewarded per Ascension point spent
@@ -192,7 +243,6 @@ class App extends React.Component {
         newList[x] = aspect;
       }
     }
-    // up to here good i think
 
     // make sure the aspects we have chosen don't get filtered out
     for (var y in list) {
@@ -221,12 +271,10 @@ class App extends React.Component {
     };
   }
 
+  // what we did to break it: changed aspect to be chosen randomly and removed brackets from alreadypicked check
   calculate() {
     // step 1: make a list of relevant aspects and gather the total embodiment requirements
     var data = this.filterApplicableAspects(this.state.selection);
-
-    const maxIterations = 1;
-    const maxAspects = 2;
 
     var bestBuild;
 
@@ -242,16 +290,17 @@ class App extends React.Component {
         availableAspects[u] = aspects[u]
       }
 
-      for (var z in availableAspects) {
-        var aspect = availableAspects[z]
+      
+      for (var attempts = 0; attempts < 1000; attempts++) {
+        // pick random aspect
+        var aspect = _.sample(availableAspects)
         var skipRandomChoice = false;
 
-        // TODO CHECK IF WE MEET THE REQS FOR THE PLAYER-PICKED NODES, AND IF SO, START PUTTING THOSE IN AND IGNORE THE NEXT IF CODE BLOCK
-
+        //CHECK IF WE MEET THE REQS FOR THE PLAYER-PICKED NODES, AND IF SO, START PUTTING THOSE IN AND IGNORE THE NEXT IF CODE BLOCK
         for (var v in data.chosenAspects) {
           var chosenAspect = data.chosenAspects[v];
 
-          if (fullfillsRequirements(build, {chosenAspect}) && !aspectAlreadyPicked(build, {chosenAspect})) {
+          if (fullfillsRequirements(build, {chosenAspect}) && !aspectAlreadyPicked(build, chosenAspect)) {
             build.push(chosenAspect)
 
             skipRandomChoice = true;
@@ -264,14 +313,26 @@ class App extends React.Component {
 
         if (!skipRandomChoice) {
           // choose it if we can and if we dont already have it in some way
-          if (fullfillsRequirements(build, {aspect}) && !aspectAlreadyPicked(build, {aspect})) {
+          if (fullfillsRequirements(build, {aspect}) && !aspectAlreadyPicked(build, aspect)) {
             build.push(aspect)
 
             console.log("picked " + aspect.name)
           }
         }
 
-        if (build.length >= maxAspects)
+        // check if we got all the nodes we wanted
+        var allChosenNodesObtained = false;
+        for (var n in data.chosenAspects) {
+          if (!build.includes(data.chosenAspects[n])) {
+            allChosenNodesObtained = false;
+            break;
+          }
+
+          allChosenNodesObtained = true;
+        }
+
+        // break if we finished picking aspects for this build
+        if (build.length >= maxAspects || allChosenNodesObtained)
           break;
       }
 
@@ -307,19 +368,6 @@ class App extends React.Component {
     this.setState({
       selection: selection
     })
-
-    // const checked = e.target.checked;
-    // var selection = this.state.selection.slice();
-    // //console.log(aspect.name + " -> " + e.target.checked)
-
-    // if (!selection.includes(aspect))
-    //   selection.push(aspect);
-    // else
-    //   selection = selection.filter(function(val, index, arr){ return val != aspect })
-
-    // this.setState({
-    //   selection: selection
-    // })
   }
 
   render() {
@@ -393,6 +441,8 @@ function getTotalPoints(build) {
   for (var x = 0; x < build.length; x++) {
     points += build[x].nodes;
   }
+
+  return points;
 }
 
 function mergeIntoObject(build, aspect) {
