@@ -4,8 +4,13 @@
   justify-content: space-around;
   align-items: flex-start;
   width: 95%;
-  height: 500px;
+  height: 595px;
   margin: 25px;
+}
+
+hr {
+  width: 90%;
+  margin: 7px
 }
 
 .bottom-interface {
@@ -28,12 +33,13 @@ input[type="checkbox"] {
 }
 
 .aspect {
-  height: 40px;
+  height: 25px;
   margin: 8px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  width: 90%;
 }
 
 .embodiments-box {
@@ -67,11 +73,11 @@ input[type="checkbox"] {
 }
 
 .inertia {
-  border-color: cyan;
+  border-color: #114f9c;
 }
 
 .life {
-  border-color: yellow;
+  border-color: #baae00;
 }
 
 .aspect-column {

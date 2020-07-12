@@ -3,15 +3,16 @@ import logo from './logo.svg';
 import './App.css';
 import _ from "lodash"
 import { result } from 'underscore';
+import { aspects } from "./Data.js" // ascension data goes there
 
-const maxIterations = 100; // how many random builds are generated and compared
+const maxIterations = 1000; // how many random builds are generated and compared
 const maxAspects = 15; // maximum aspects a build can have
 const pointBudget = 25; // TODO IMPLEMENT
 
+// TODO FIX INCONSISTENT SPACE BETWEEN ELEMENTS IN ASPECT BY MANUALLY SETTING WIDTHS
+
 // things to consider:
 // core completion, dipping into tier 2s (auto-generate separate internal aspects to facilitate that)
-
-// iterate through every possible combination of aspects, and save the most point-cost-efficient one, then try to calculate a route to it
 
 // REMEMBER WHEN YOU'RE PASSING AN ASPECT AS ARGUMENT, WRAP IT IN {} SO IT'S PROPERLY ITERABLE
 
@@ -23,112 +24,6 @@ const pointBudget = 25; // TODO IMPLEMENT
 // add dipping
 
 // try to favor aspects with a good point to emb ratio ; for this we need to also calculate a point to emb ratio relative to the embodiments we actually want
-
-const aspects = {
-  core_force: {
-    name: "The Core",
-    id: "core_force",
-    family: "force",
-    tier: 0,
-    requirements: {
-    },
-    rewards: {
-      force: 1,
-    },
-    nodes: 1,
-    hasChoiceNode: false,
-  },
-  falcon: {
-    name: "Falcon",
-    id: "falcon",
-    family: "force",
-    tier: 1,
-    requirements: {
-      force: 1
-    },
-    rewards: {
-      force: 3,
-      life: 2,
-    },
-    nodes: 5,
-    hasChoiceNode: false,
-  },
-  hatchet: {
-    name: "Hatchet",
-    id: "hatchet",
-    family: "force",
-    tier: 1,
-    requirements: {
-      force: 1
-    },
-    rewards: {
-      force: 3,
-      entropy: 2,
-    },
-    nodes: 5,
-    hasChoiceNode: false,
-  },
-  hornet: {
-    name: "Hornet",
-    id: "hornet",
-    family: "force",
-    tier: 1,
-    requirements: {
-      force: 1,
-    },
-    rewards: {
-      force: 3,
-      life: 1,
-    },
-    nodes: 3,
-    hasChoiceNode: false,
-  },
-  serpent: {
-    name: "Serpent",
-    id: "serpent",
-    family: "force",
-    tier: 1,
-    requirements: {
-      force: 1,
-    },
-    rewards: {
-      force: 3,
-      entropy: 1,
-    },
-    nodes: 3,
-    hasChoiceNode: false,
-  },
-  // FORCE TIER 2
-  arcanist: {
-    name: "Arcanist",
-    id: "arcanist",
-    family: "force",
-    tier: 2,
-    requirements: {
-      force: 5,
-      life: 1,
-    },
-    rewards: {
-      force: 3,
-    },
-    nodes: 5,
-    hasChoiceNode: true,
-  },
-  // LIFE TIER 1
-  core_life: {
-    name: "The Core",
-    id: "core_life",
-    family: "life",
-    tier: 1,
-    requirements: {
-    },
-    rewards: {
-      life: 1,
-    },
-    nodes: 1,
-    hasChoiceNode: false,
-  },
-}
 
 // calculate embodiments rewarded per Ascension point spent
 for (var x in aspects) {
@@ -197,6 +92,7 @@ class App extends React.Component {
     this.state = {
       selection: [],
       result: null,
+      waiting: false,
     }
   }
 
@@ -274,10 +170,17 @@ class App extends React.Component {
 
   // what we did to break it: changed aspect to be chosen randomly and removed brackets from alreadypicked check
   calculate() {
+    this.setState({
+      waiting: true,
+    })
+
     // step 1: make a list of relevant aspects and gather the total embodiment requirements
     var data = this.filterApplicableAspects(this.state.selection);
 
     var bestBuild;
+
+    if (Object.keys(data.chosenAspects).length == 0)
+      return;
 
     // start a new build
     for (var iteration = 0; iteration < maxIterations; iteration++) {
@@ -306,7 +209,7 @@ class App extends React.Component {
 
             skipRandomChoice = true;
 
-            console.log("picked " + chosenAspect.name + " because reqs were fullfilled")
+            console.log("picked " + chosenAspect.name + " (goal) because reqs were fullfilled")
 
             break;
           }
@@ -357,6 +260,7 @@ class App extends React.Component {
 
     this.setState({
       result: bestBuild,
+      waiting: false,
     })
   }
 
@@ -383,8 +287,10 @@ class App extends React.Component {
     var lifeAspects = [];
     var resultText = ""
 
-    if (this.state.result != null) {
-      resultText = "Shortest path found: "
+    if (this.state.waiting)
+      resultText = "" // removed, didnt work properly anyways
+    else if (this.state.result != null) {
+      resultText = "Shortest path found (" + this.state.result.points + " points): "
       for (var x in this.state.result.aspects) {
         resultText += this.state.result.aspects[x].name
 
@@ -395,6 +301,7 @@ class App extends React.Component {
 
     for (var x in aspects) {
       var aspect = aspects[x];
+      var currentAspect;
 
       var element = <Aspect 
       data={aspect}
@@ -402,26 +309,44 @@ class App extends React.Component {
       clickCallback={this.updateSelection.bind(this)}
       />
 
+      var hr = <hr key={x + "_hr"}></hr>;
+
       switch (aspect.family) {
         case "force":
-          forceAspects.push(element);
+          currentAspect = forceAspects;
           break;
         case "entropy":
-          entropyAspects.push(element);
+          currentAspect = entropyAspects;
           break;
         case "form":
-          formAspects.push(element);
+          currentAspect = formAspects;
           break;
         case "inretia":
-          inertiaAspects.push(element);
+          currentAspect = inertiaAspects;
           break;
         case "life":
-          lifeAspects.push(element);
+          currentAspect = lifeAspects;
           break;
         default:
           console.log("Erroneous aspect " + aspect.name)
           break;
       }
+
+      currentAspect.push(element);
+
+      var aspectsAfterWhichWePutAnHrSoThingsLookNice = [
+        "core_force",
+        "serpent",
+        "tiger",
+        "core_entropy",
+        "wolf",
+        "supplicant",
+        "core_form",
+        "silkworm",
+        "wealth",
+      ]
+      if (aspectsAfterWhichWePutAnHrSoThingsLookNice.includes(aspect.id))
+        currentAspect.push(hr);
     }
 
     return (
@@ -444,7 +369,7 @@ class App extends React.Component {
           </div>
         </div>
         <div className="bottom-interface">
-          <button onClick={() => this.calculate()}>Calculate shortest path</button>
+          <button onClick={() => this.calculate()}>Search shortest path</button>
           <p>{resultText}</p>
         </div>
       </div>
