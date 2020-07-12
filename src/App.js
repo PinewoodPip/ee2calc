@@ -2,6 +2,7 @@ import React from 'react';
 import logo from './logo.svg';
 import './App.css';
 import _ from "lodash"
+import { result } from 'underscore';
 
 const maxIterations = 100; // how many random builds are generated and compared
 const maxAspects = 15; // maximum aspects a build can have
@@ -195,7 +196,7 @@ class App extends React.Component {
 
     this.state = {
       selection: [],
-      result: "",
+      result: null,
     }
   }
 
@@ -353,6 +354,10 @@ class App extends React.Component {
 
     console.log("--- Best Build ---")
     console.log(bestBuild);
+
+    this.setState({
+      result: bestBuild,
+    })
   }
 
   updateSelection(aspect, e) {
@@ -376,6 +381,17 @@ class App extends React.Component {
     var formAspects = [];
     var inertiaAspects = [];
     var lifeAspects = [];
+    var resultText = ""
+
+    if (this.state.result != null) {
+      resultText = "Shortest path found: "
+      for (var x in this.state.result.aspects) {
+        resultText += this.state.result.aspects[x].name
+
+        if (x != this.state.result.aspects.length - 1)
+          resultText += " -> "
+      }
+    }
 
     for (var x in aspects) {
       var aspect = aspects[x];
@@ -427,8 +443,10 @@ class App extends React.Component {
             {lifeAspects}
           </div>
         </div>
-        <button onClick={() => this.calculate()}>Calulate shortest path</button>
-        <p>{this.state.result}</p>
+        <div className="bottom-interface">
+          <button onClick={() => this.calculate()}>Calculate shortest path</button>
+          <p>{resultText}</p>
+        </div>
       </div>
     )
   };

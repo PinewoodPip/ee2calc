@@ -8,6 +8,25 @@
   margin: 25px;
 }
 
+.bottom-interface {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+button {
+  height: 50px;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin: 5px;
+}
+
 .aspect {
   height: 40px;
   margin: 8px;
