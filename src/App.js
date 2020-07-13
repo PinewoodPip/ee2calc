@@ -18,6 +18,8 @@ import { aspects } from "./Data.js" // ascension data goes there
 
 // Core (Form) -> Silkworm -> Nautilus -> Doppelganger (+force) -> REMOVE NAUTILUS -> 0 1 7 0 0 total embs. it picks the +force version cuz the goals list is always ordered the same and the force variant of a t2 always goes first
 
+// TODO REPORT TIED BUILDS
+
 const maxIterations = 2000; // how many random builds are generated and compared
 const maxAspects = 15; // maximum aspects a build can have
 const pointBudget = 25; // TODO IMPLEMENT
@@ -198,6 +200,12 @@ class App extends React.Component {
     }
   }
 
+  updateUseFullCore(newBool) {
+    this.setState({
+      useFullCore: newBool,
+    })
+  }
+
   filterApplicableAspects(list) { // list is chosen aspects
 
     // if player chose tier 2s, replace those with generated versions. later we will discard the duplicates once one of the variants has been chosen
@@ -336,8 +344,8 @@ class App extends React.Component {
         availableAspects[u] = aspects[u]
       }
 
-      
-      for (var attempts = 0; attempts < 1000; attempts++) {
+      var failed = false;
+      for (var attempts = 0; attempts < 2000; attempts++) {
 
         // pick random aspect
         var aspect = _.sample(availableAspects)
@@ -406,19 +414,22 @@ class App extends React.Component {
           break;
       }
 
-      console.log(build);
+      // < ! > Sometimes a build comes up with 0 aspects and points. I assume this happens when the find-aspects loop has finished and somehow, miraculously, all ~2000 attempts to find a starting point for the build have failed.
+      if (build.length != 0) {
+        console.log(build);
 
-      var buildInfo = {
-        aspects: build,
-        points: getTotalPoints(build),
-        totalEmbodiments: getTotalRewards(build),
+        var buildInfo = {
+          aspects: build,
+          points: getTotalPoints(build),
+          totalEmbodiments: getTotalRewards(build),
+        }
+
+        // check if new build is more point-efficient
+        if (bestBuild == undefined)
+          bestBuild = buildInfo;
+        else if (buildInfo.points < bestBuild.points)
+          bestBuild = buildInfo;
       }
-
-      // check if new build is more point-efficient
-      if (bestBuild == undefined)
-        bestBuild = buildInfo;
-      else if (buildInfo.points < bestBuild.points)
-        bestBuild = buildInfo;
     }
 
     console.log("--- Best Build ---")
@@ -547,6 +558,10 @@ class App extends React.Component {
           </div>
         </div>
         <div className="bottom-interface">
+          <div class="checkbox-bottom-ui">
+            <input type="checkbox" checked={this.state.useFullCore} onChange={(e) => this.updateUseFullCore(e.target.checked)}></input>
+            <p>Use a full Core</p>
+          </div>
           <button onClick={() => this.calculate()}>Search shortest path</button>
           <p>{resultText}</p>
         </div>
