@@ -1,9 +1,26 @@
 export const aspects = {
+    core_full: {
+      name: "Core (Full)",
+      id: "core_full",
+      family: "special",
+      tier: 1,
+      requirements: {
+      },
+      rewards: {
+        force: 2,
+        entropy: 2,
+        form: 2,
+        inertia: 2,
+        life: 2,
+      },
+      nodes: 5,
+      hasChoiceNode: false,
+    },
     core_force: {
       name: "Core (Force)",
       id: "core_force",
       family: "force",
-      tier: 0,
+      tier: 1,
       requirements: {
       },
       rewards: {
