@@ -10,11 +10,6 @@ const maxIterations = 2000; // how many random builds are generated and compared
 const maxAspects = 15; // maximum aspects a build can have
 const pointBudget = 25; // TODO IMPLEMENT
 
-var tippySettings = {
-  delay: 0,
-  placement: 'bottom',
-}
-
 // TODO FIX INCONSISTENT SPACE BETWEEN ELEMENTS IN ASPECT BY MANUALLY SETTING WIDTHS
 
 // things to consider:
@@ -62,21 +57,6 @@ class Aspect extends React.Component {
 
     return elements;
   }
-
-  // getRewardText() {
-  //   var elements = [];
-
-  //   for (var x in this.props.data.rewards) {
-  //     var amount = this.props.data.rewards[x]
-  //     var element;
-  //     var type = x; // serves to figure out css class
-
-  //     element = <div key={x} className={"embodiment " + type}><p>{amount}</p></div>
-  //     elements.push(element);
-  //   }
-
-  //   return elements;
-  // }
 
   getRewards() {
     var text = "";
@@ -153,7 +133,7 @@ class App extends React.Component {
       for (var x in aspect.rewards) {
         var reward = aspect.rewards[x];
 
-        // if an aspect rewards a type of embodiment we need, it's valid
+        // if an aspect rewards a type of embodiment we need, it's valid. Otherwise we discard it
         if (reward > 0 && reqs[x] > 0)
           return true;
       }
@@ -225,14 +205,14 @@ class App extends React.Component {
     if (Object.keys(data.chosenAspects).length == 0)
       return;
 
-    // start a new build
+    // step 2: create random builds and save the most point-efficient one
     for (var iteration = 0; iteration < maxIterations; iteration++) {
       var aspects = data.aspects;
 
       console.log("New build comin' up")
       var build = [];
 
-      var availableAspects = {}; // todo shuffle or pick random key
+      var availableAspects = {}; // unnecessary? we dont edit this list
       for (var u in aspects) {
         availableAspects[u] = aspects[u]
       }
@@ -244,7 +224,7 @@ class App extends React.Component {
         var aspect = _.sample(availableAspects)
         var skipRandomChoice = false;
 
-        //CHECK IF WE MEET THE REQS FOR THE PLAYER-PICKED NODES, AND IF SO, START PUTTING THOSE IN AND IGNORE THE NEXT IF CODE BLOCK
+        //CHECK IF WE MEET THE REQS FOR THE PLAYER-PICKED NODES, AND IF SO, START PUTTING THOSE IN AND IGNORE THE RANDOMLY PICKED ASPECT
         for (var v in data.chosenAspects) {
           var chosenAspect = data.chosenAspects[v];
 
@@ -253,7 +233,7 @@ class App extends React.Component {
 
             skipRandomChoice = true;
 
-            console.log("picked " + chosenAspect.name + " (goal) because reqs were fullfilled")
+            console.log("picked " + chosenAspect.name + " (goal) because reqs were fulfilled")
 
             break;
           }
@@ -308,10 +288,10 @@ class App extends React.Component {
     })
   }
 
+  // add/remove aspects to the list of aspects we want to calculate, called by the checkboxes
   updateSelection(aspect, e) {
     const checked = e.target.checked;
     var selection = this.state.selection.slice();
-    //console.log(aspect.name + " -> " + e.target.checked)
 
     if (!selection.includes(aspect))
       selection.push(aspect);
@@ -344,6 +324,7 @@ class App extends React.Component {
       }
     }
 
+    // aspect elements
     for (var x in aspects) {
       var aspect = aspects[x];
       var currentAspect;
@@ -454,6 +435,7 @@ function randomProp(obj) {
   return obj[keys[ keys.length * Math.random() << 0]];
 };
 
+// gets the highest requirement for each embodiment on a build
 function getTotalReqs(aspects) {
   var embodiments = {
     force: 0,
