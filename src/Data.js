@@ -592,6 +592,205 @@ export const aspects = {
       nodes: 5,
       hasChoiceNode: false,
     },
+    // INERTIA TIER 1
+    core_inertia: {
+      name: "Core (Inertia)",
+      id: "core_inertia",
+      family: "inertia",
+      tier: 1,
+      requirements: {
+      },
+      rewards: {
+        inertia: 1,
+      },
+      nodes: 1,
+      hasChoiceNode: false,
+    },
+    armadillo: {
+      name: "Armadillo",
+      id: "armadillo",
+      family: "inertia",
+      tier: 1,
+      requirements: {
+        inertia: 1,
+      },
+      rewards: {
+        inertia: 3,
+        form: 1,
+      },
+      nodes: 3,
+      hasChoiceNode: false,
+    },
+    auroch: {
+      name: "Auroch",
+      id: "auroch",
+      family: "inertia",
+      tier: 1,
+      requirements: {
+        inertia: 1,
+      },
+      rewards: {
+        inertia: 3,
+        life: 1,
+      },
+      nodes: 3,
+      hasChoiceNode: false,
+    },
+    crab: {
+      name: "Crab",
+      id: "crab",
+      family: "inertia",
+      tier: 1,
+      requirements: {
+        inertia: 1,
+      },
+      rewards: {
+        inertia: 3,
+        life: 2,
+      },
+      nodes: 5,
+      hasChoiceNode: false,
+    },
+    guardsman: {
+      name: "Guardsman",
+      id: "guardsman",
+      family: "inertia",
+      tier: 1,
+      requirements: {
+        inertia: 1,
+      },
+      rewards: {
+        inertia: 3,
+        form: 2,
+      },
+      nodes: 5,
+      hasChoiceNode: false,
+    },
+    // INERTIA TIER 2
+    casque: {
+      name: "Casque",
+      id: "casque",
+      family: "inertia",
+      tier: 2,
+      requirements: {
+        inertia: 5,
+        life: 1,
+      },
+      rewards: {
+        inertia: 3,
+      },
+      nodes: 5,
+      hasChoiceNode: true,
+    },
+    centurion: {
+      name: "Centurion",
+      id: "centurion",
+      family: "inertia",
+      tier: 2,
+      requirements: {
+        inertia: 3,
+        form: 1,
+        life: 2,
+      },
+      rewards: {
+        inertia: 2,
+        life: 1,
+      },
+      nodes: 5,
+      hasChoiceNode: true,
+    },
+    gladiator: {
+      name: "Gladiator",
+      id: "gladiator",
+      family: "inertia",
+      tier: 2,
+      requirements: {
+        inertia: 3,
+        form: 3,
+      },
+      rewards: {
+        inertia: 2,
+        form: 1,
+      },
+      nodes: 5,
+      hasChoiceNode: true,
+    },
+    hippopotamus: {
+      name: "Hippopotamus",
+      id: "hippopotamus",
+      family: "inertia",
+      tier: 2,
+      requirements: {
+        inertia: 4,
+        life: 2,
+      },
+      rewards: {
+        inertia: 2,
+      },
+      nodes: 4,
+      hasChoiceNode: true,
+    },
+    rhinoceros: {
+      name: "Rhinoceros",
+      id: "rhinoceros",
+      family: "inertia",
+      tier: 2,
+      requirements: {
+        inertia: 4,
+        form: 2,
+      },
+      rewards: {
+        inertia: 2,
+      },
+      nodes: 4,
+      hasChoiceNode: true,
+    },
+    // INERTIA TIER 3
+    arena: {
+      name: "Arena",
+      id: "arena",
+      family: "inertia",
+      tier: 3,
+      requirements: {
+        inertia: 7,
+        life: 5,
+        form: 1,
+      },
+      rewards: {
+      },
+      nodes: 5,
+      hasChoiceNode: false,
+    },
+    champion: {
+      name: "Champion",
+      id: "champion",
+      family: "inertia",
+      tier: 3,
+      requirements: {
+        inertia: 8,
+        life: 3,
+        form: 2,
+      },
+      rewards: {
+      },
+      nodes: 5,
+      hasChoiceNode: false,
+    },
+    fortress: {
+      name: "Fortress",
+      id: "fortress",
+      family: "inertia",
+      tier: 3,
+      requirements: {
+        inertia: 7,
+        life: 1,
+        form: 5,
+      },
+      rewards: {
+      },
+      nodes: 5,
+      hasChoiceNode: false,
+    },
     // LIFE TIER 1
     core_life: {
       name: "Core (Life)",
@@ -604,6 +803,190 @@ export const aspects = {
         life: 1,
       },
       nodes: 1,
+      hasChoiceNode: false,
+    },
+    beetle: {
+      name: "Beetle",
+      id: "beetle",
+      family: "life",
+      tier: 1,
+      requirements: {
+        life: 1,
+      },
+      rewards: {
+        life: 3,
+        force: 1,
+      },
+      nodes: 3,
+      hasChoiceNode: false,
+    },
+    hind: {
+      name: "Hind",
+      id: "hind",
+      family: "life",
+      tier: 1,
+      requirements: {
+        life: 1,
+      },
+      rewards: {
+        life: 3,
+        force: 2,
+      },
+      nodes: 5,
+      hasChoiceNode: false,
+    },
+    lizard: {
+      name: "Lizard",
+      id: "lizard",
+      family: "life",
+      tier: 1,
+      requirements: {
+        life: 1,
+      },
+      rewards: {
+        life: 3,
+        inertia: 1,
+      },
+      nodes: 3,
+      hasChoiceNode: false,
+    },
+    rabbit: {
+      name: "Rabbit",
+      id: "rabbit",
+      family: "life",
+      tier: 1,
+      requirements: {
+        life: 1,
+      },
+      rewards: {
+        life: 3,
+        inertia: 2,
+      },
+      nodes: 5,
+      hasChoiceNode: false,
+    },
+    // LIFE TIER 2
+    enchantress: {
+      name: "Enchantress",
+      id: "enchantress",
+      family: "life",
+      tier: 2,
+      requirements: {
+        life: 5,
+        force: 1,
+      },
+      rewards: {
+        life: 3,
+      },
+      nodes: 5,
+      hasChoiceNode: true,
+    },
+    huntress: {
+      name: "Huntress",
+      id: "huntress",
+      family: "life",
+      tier: 2,
+      requirements: {
+        life: 3,
+        force: 2,
+        inertia: 1,
+      },
+      rewards: {
+        life: 2,
+        force: 1,
+      },
+      nodes: 5,
+      hasChoiceNode: true,
+    },
+    nymph: {
+      name: "Nymph",
+      id: "nymph",
+      family: "life",
+      tier: 2,
+      requirements: {
+        life: 5,
+        inertia: 1,
+      },
+      rewards: {
+        life: 3,
+      },
+      nodes: 5,
+      hasChoiceNode: true,
+    },
+    pegasus: {
+      name: "Pegasus",
+      id: "pegasus",
+      family: "life",
+      tier: 2,
+      requirements: {
+        life: 4,
+        inertia: 2,
+      },
+      rewards: {
+        life: 2,
+      },
+      nodes: 4,
+      hasChoiceNode: true,
+    },
+    stag: {
+      name: "Stag",
+      id: "stag",
+      family: "life",
+      tier: 2,
+      requirements: {
+        life: 4,
+        force: 2,
+      },
+      rewards: {
+        life: 2,
+      },
+      nodes: 4,
+      hasChoiceNode: true,
+    },
+    // LIFE TIER 3
+    goddess: {
+      name: "Goddess",
+      id: "goddess",
+      family: "life",
+      tier: 3,
+      requirements: {
+        life: 7,
+        inertia: 5,
+        force: 1,
+      },
+      rewards: {
+      },
+      nodes: 5,
+      hasChoiceNode: false,
+    },
+    hope: {
+      name: "Hope",
+      id: "hope",
+      family: "life",
+      tier: 3,
+      requirements: {
+        life: 7,
+        inertia: 1,
+        force: 5,
+      },
+      rewards: {
+      },
+      nodes: 5,
+      hasChoiceNode: false,
+    },
+    splendor: {
+      name: "Splendor",
+      id: "splendor",
+      family: "life",
+      tier: 3,
+      requirements: {
+        life: 8,
+        inertia: 2,
+        force: 3,
+      },
+      rewards: {
+      },
+      nodes: 5,
       hasChoiceNode: false,
     },
   }

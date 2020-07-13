@@ -1,7 +1,8 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
 import _ from "lodash"
+import Tippy from '@tippyjs/react';
+import 'tippy.js/dist/tippy.css';
 import { result } from 'underscore';
 import { aspects } from "./Data.js" // ascension data goes there
 
@@ -74,13 +75,15 @@ class Aspect extends React.Component {
 
   render() {
     return (
-      <div className="aspect">
-        <input type="checkbox" onChange={(e) => this.props.clickCallback(this.props.data, e)}></input>
-        <p>{this.props.data.name}</p>
-        <div className="embodiments-box">
-          {this.getRequirementsText()}
+      <Tippy>
+        <div className="aspect">
+          <input type="checkbox" onChange={(e) => this.props.clickCallback(this.props.data, e)}></input>
+          <p>{this.props.data.name}</p>
+          <div className="embodiments-box">
+            {this.getRequirementsText()}
+          </div>
         </div>
-      </div>
+      </Tippy>
     ) // todo display rewards somewhere, maybe in tooltips
   }
 }
@@ -160,6 +163,10 @@ class App extends React.Component {
       chosenAspects[b] = list[b];
     }
 
+    this.setState({
+      waiting: true,
+    })
+
     return {
       reqs: reqs,
       aspects: newList,
@@ -168,11 +175,7 @@ class App extends React.Component {
     };
   }
 
-  // what we did to break it: changed aspect to be chosen randomly and removed brackets from alreadypicked check
-  calculate() {
-    this.setState({
-      waiting: true,
-    })
+  async calculate() {
 
     // step 1: make a list of relevant aspects and gather the total embodiment requirements
     var data = this.filterApplicableAspects(this.state.selection);
@@ -184,9 +187,9 @@ class App extends React.Component {
 
     // start a new build
     for (var iteration = 0; iteration < maxIterations; iteration++) {
-      var aspects = data.aspects; // CAREFUL WE WERE ACCIDENTALLY ONLY INCLUDING THE ONES THE PLAYER CHECKED
+      var aspects = data.aspects;
 
-      console.log("new build")
+      console.log("New build comin' up")
       var build = [];
 
       var availableAspects = {}; // todo shuffle or pick random key
@@ -196,6 +199,7 @@ class App extends React.Component {
 
       
       for (var attempts = 0; attempts < 1000; attempts++) {
+
         // pick random aspect
         var aspect = _.sample(availableAspects)
         var skipRandomChoice = false;
@@ -290,7 +294,8 @@ class App extends React.Component {
     if (this.state.waiting)
       resultText = "" // removed, didnt work properly anyways
     else if (this.state.result != null) {
-      resultText = "Shortest path found (" + this.state.result.points + " points): "
+      resultText = "Shortest path found (" + this.state.result.points + " points): ";
+
       for (var x in this.state.result.aspects) {
         resultText += this.state.result.aspects[x].name
 
@@ -321,7 +326,7 @@ class App extends React.Component {
         case "form":
           currentAspect = formAspects;
           break;
-        case "inretia":
+        case "inertia":
           currentAspect = inertiaAspects;
           break;
         case "life":
@@ -344,6 +349,12 @@ class App extends React.Component {
         "core_form",
         "silkworm",
         "wealth",
+        "core_inertia",
+        "guardsman",
+        "rhinoceros",
+        "core_life",
+        "rabbit",
+        "stag",
       ]
       if (aspectsAfterWhichWePutAnHrSoThingsLookNice.includes(aspect.id))
         currentAspect.push(hr);
@@ -434,7 +445,6 @@ function getTotalRewards(aspects) {
   };
 
   for (var x in aspects) {
-    //console.log(x) // this prints the property names of an aaspect...
     var aspect = aspects[x];
 
     for (var r in aspect.rewards) {
@@ -445,13 +455,9 @@ function getTotalRewards(aspects) {
   return rewards;
 }
 
-// previously we were checking the reqs for the build WITH THE ASPECT ALREADY IN. dont do that
 function fullfillsRequirements(build, aspect) {
   var embodiments = getTotalRewards(build);
   var reqs = getTotalReqs(aspect);
-
-  // console.log(reqs) // erorr
-  // console.log(embodiments)
 
   for (var e in reqs) {
     if (embodiments[e] < reqs[e])
@@ -463,7 +469,6 @@ function fullfillsRequirements(build, aspect) {
 
 function aspectAlreadyPicked(build, aspect) {
   for (var x = 0; x < build.length; x++) {
-    //console.log(aspect) // odd??
     if (build[x].id == aspect.id)
       return true;
   }
