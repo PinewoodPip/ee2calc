@@ -28,6 +28,7 @@ export const aspects = {
       },
       nodes: 1,
       hasChoiceNode: false,
+      isCoreNode: true,
     },
     falcon: {
       name: "Falcon",
@@ -226,6 +227,7 @@ export const aspects = {
       },
       nodes: 1,
       hasChoiceNode: false,
+      isCoreNode: true,
     },
     crow: {
       name: "Crow",
@@ -424,6 +426,7 @@ export const aspects = {
       },
       nodes: 1,
       hasChoiceNode: false,
+      isCoreNode: true,
     },
     chalice: { // consume the cum chalice
       name: "Chalice",
@@ -622,6 +625,7 @@ export const aspects = {
       },
       nodes: 1,
       hasChoiceNode: false,
+      isCoreNode: true,
     },
     armadillo: {
       name: "Armadillo",
@@ -821,6 +825,7 @@ export const aspects = {
       },
       nodes: 1,
       hasChoiceNode: false,
+      isCoreNode: true,
     },
     beetle: {
       name: "Beetle",

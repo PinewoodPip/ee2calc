@@ -220,8 +220,6 @@ class App extends React.Component {
       else {
         realList.push(aspect);
       }
-
-      // todo core stuff. either full or not full (do we need handling for the edge case where the calc chooses all 5 cores in non-core mode? probably)
     }
 
     console.log(realList); // error, tier 2s are not getting included
@@ -241,9 +239,17 @@ class App extends React.Component {
       for (var x in aspect.rewards) {
         var reward = aspect.rewards[x];
 
-        // !!! always ignore base tier 2s !!!, use only the generated versions
+        // !!! always ignore base tier 2s !!!, use only the generated versions, which have the +embodiment node considered
         if (aspect.tier == 2 && aspect.generated == undefined)
           return false;
+
+        // core handling. (do we need handling for the edge case where the calc chooses all 5 cores in non-core mode? probably. TODO)
+        if (aspect.id == "core_full" && !this.state.useFullCore)
+          return false;
+        else if (aspect.isCoreNode && this.state.useFullCore)
+          return false;
+        // else if (aspect.isCoreNode == undefined)
+        //   realList.push(aspect);
 
         // if an aspect rewards a type of embodiment we need, it's valid. Otherwise we discard it
         if (reward > 0 && reqs[x] > 0)
@@ -271,12 +277,13 @@ class App extends React.Component {
     for (var x in aspects) {
       var aspect = aspects[x];
 
-      if (hasRelevantReward(aspect, reqs)) {
+      const func = hasRelevantReward.bind(this);
+      if (func(aspect, reqs)) {
         newList[x] = aspect;
       }
     }
 
-    // make sure the aspects we have chosen don't get filtered out. THIS DOES PUT BACK BASE TIER 2S, FIX THAT!!!!
+    // make sure the aspects we have chosen don't get filtered out.
     for (var y in list) {
       if (!newList.hasOwnProperty(list[y].id))
         newList[list[y].id] = list[y];
