@@ -6,9 +6,14 @@ import 'tippy.js/dist/tippy.css';
 import { result } from 'underscore';
 import { aspects } from "./Data.js" // ascension data goes there
 
-const maxIterations = 1000; // how many random builds are generated and compared
+const maxIterations = 2000; // how many random builds are generated and compared
 const maxAspects = 15; // maximum aspects a build can have
 const pointBudget = 25; // TODO IMPLEMENT
+
+var tippySettings = {
+  delay: 0,
+  placement: 'bottom',
+}
 
 // TODO FIX INCONSISTENT SPACE BETWEEN ELEMENTS IN ASPECT BY MANUALLY SETTING WIDTHS
 
@@ -58,24 +63,59 @@ class Aspect extends React.Component {
     return elements;
   }
 
-  getRewardText() {
-    var elements = [];
+  // getRewardText() {
+  //   var elements = [];
+
+  //   for (var x in this.props.data.rewards) {
+  //     var amount = this.props.data.rewards[x]
+  //     var element;
+  //     var type = x; // serves to figure out css class
+
+  //     element = <div key={x} className={"embodiment " + type}><p>{amount}</p></div>
+  //     elements.push(element);
+  //   }
+
+  //   return elements;
+  // }
+
+  getRewards() {
+    var text = "";
+    var embs = {
+      force: 0,
+      entropy: 0,
+      form: 0,
+      inertia: 0,
+      life: 0,
+    }
 
     for (var x in this.props.data.rewards) {
       var amount = this.props.data.rewards[x]
-      var element;
-      var type = x; // serves to figure out css class
-
-      element = <div key={x} className={"embodiment " + type}><p>{amount}</p></div>
-      elements.push(element);
+      embs[x] = amount;
     }
 
-    return elements;
+    text += "Completion rewards:\n"
+    for (var z in embs) {
+      if (embs[z] != 0)
+        text += embs[z] + " " + z.toUpperCase() + "\n";
+    }
+
+    return text;
+  }
+
+  getTooltip() {
+    var name = this.props.data.name
+    var cost = this.props.data.nodes;
+    var rewards = this.getRewards();
+
+    return (
+      name + " ({0} nodes)".format(cost) + "\n" +
+      rewards
+    );
   }
 
   render() {
     return (
-      <Tippy>
+      <Tippy content={this.getTooltip()} placement="bottom" duration="0">
         <div className="aspect">
           <input type="checkbox" onChange={(e) => this.props.clickCallback(this.props.data, e)}></input>
           <p>{this.props.data.name}</p>
@@ -84,7 +124,7 @@ class Aspect extends React.Component {
           </div>
         </div>
       </Tippy>
-    ) // todo display rewards somewhere, maybe in tooltips
+    )
   }
 }
 
@@ -475,5 +515,10 @@ function aspectAlreadyPicked(build, aspect) {
 
   return false;
 }
+
+String.prototype.format = function () { // by gpvos from stackoverflow
+  var args = arguments;
+  return this.replace(/\{(\d+)\}/g, function (m, n) { return args[n]; });
+};
 
 export default App;
