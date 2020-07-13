@@ -32,6 +32,11 @@ input[type="checkbox"] {
   margin: 5px;
 }
 
+.tooltip {
+  text-align: center;
+  line-height: 5px;
+}
+
 .aspect {
   height: 25px;
   margin: 8px;

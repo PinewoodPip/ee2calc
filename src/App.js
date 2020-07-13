@@ -137,7 +137,7 @@ class Aspect extends React.Component {
   }
 
   getRewards() {
-    var text = "";
+    var text = [];
     var embs = {
       force: 0,
       entropy: 0,
@@ -151,23 +151,30 @@ class Aspect extends React.Component {
       embs[x] = amount;
     }
 
-    text += "Completion rewards:\n"
+    // don't even show the header for tier 3 aspects
+    var header = (this.props.data.tier != 3) ? "Completion rewards:" : "";
     for (var z in embs) {
       if (embs[z] != 0)
-        text += embs[z] + " " + z.toUpperCase() + "\n";
+        text.push(<p key={this.props.data.name + "_tooltip_" + z}>{embs[z] + " " + z.toUpperCase()}</p>);
     }
 
-    return text;
+    return <div>
+      <p>{header}</p>
+      <div>{text}</div>
+    </div>;
   }
 
   getTooltip() {
     var name = this.props.data.name
     var cost = this.props.data.nodes;
     var rewards = this.getRewards();
-
-    return (
-      name + " ({0} nodes)".format(cost) + "\n" +
-      rewards
+    var nodeText = ((this.props.data.nodes > 1) ? " ({0} nodes)" : " ({0} node)").format(cost)
+    
+    // note to self, dont nest <p> elements accidentally
+    return (<div className="tooltip">
+        <p className="tooltip">{name + nodeText}<br /></p>
+        {rewards}
+      </div>
     );
   }
 
@@ -558,7 +565,7 @@ class App extends React.Component {
           </div>
         </div>
         <div className="bottom-interface">
-          <div class="checkbox-bottom-ui">
+          <div className="checkbox-bottom-ui">
             <input type="checkbox" checked={this.state.useFullCore} onChange={(e) => this.updateUseFullCore(e.target.checked)}></input>
             <p>Use a full Core</p>
           </div>
