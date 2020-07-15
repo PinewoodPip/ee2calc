@@ -286,7 +286,7 @@ class App extends React.Component {
 
       reqs.inertia = (aspect.requirements.inertia > reqs.inertia) ? aspect.requirements.inertia : reqs.inertia;
 
-      reqs.life = (aspect.requirements.life > reqs.foliferce) ? aspect.requirements.life : reqs.life;
+      reqs.life = (aspect.requirements.life > reqs.life) ? aspect.requirements.life : reqs.life;
     }
 
     for (var x in aspects) {
@@ -322,8 +322,7 @@ class App extends React.Component {
       waiting: true,
     })
 
-    console.log(chosenAspects) // this works
-    return {
+    return { // this works
       reqs: reqs,
       aspects: newList,
       chosenAspects: chosenAspects,
@@ -335,7 +334,6 @@ class App extends React.Component {
 
     // step 1: make a list of relevant aspects and gather the total embodiment requirements
     var data = this.filterApplicableAspects(this.state.selection);
-    console.log(data.chosenAspects)
 
     var bestBuilds = []; // todo
     var bestBuild;
@@ -347,13 +345,12 @@ class App extends React.Component {
     // step 2: create random builds and save the most point-efficient one
     for (var iteration = 0; iteration < maxIterations; iteration++) {
       var aspects = data.aspects;
-      var chosenAspects = {} // we "shuffle" this
-      for (var b in data.chosenAspects) {
+      var chosenAspects = {} // we "shuffle" this. seems to work
+      for (var b in data.chosenAspects) { // the chance of stuff getting tied is almost 0 but it's there
         chosenAspects[Math.random()] = data.chosenAspects[b];
       }
 
-      // console.log(data.chosenAspects) // this is wrong, only has 1 t2 variant
-      // console.log(chosenAspects)
+      //console.log(chosenAspects)
 
       console.log("New build comin' up")
       var build = [];
@@ -367,18 +364,8 @@ class App extends React.Component {
       for (var attempts = 0; attempts < 2000; attempts++) {
 
         // pick random aspect
-        var aspect = _.sample(availableAspects)
+        var aspect = _.sample(availableAspects) // is this the problem? do force t2 ones take priority here or something?
         var skipRandomChoice = false;
-
-        // var shuffledChosenAspects = {};
-        // var temp = [];
-        // temp = Object.keys(data.chosenAspects);
-        // shuffle(temp);
-        // console.log(temp);
-        // for (var b = 0; b < temp.length; b++) {
-        //   if (temp[b] != "0")
-        //     shuffledChosenAspects[b] = temp[b];
-        // }
 
         //CHECK IF WE MEET THE REQS FOR THE PLAYER-PICKED NODES, AND IF SO, START PUTTING THOSE IN AND IGNORE THE RANDOMLY PICKED ASPECT
         var breakThis = false;
@@ -402,7 +389,7 @@ class App extends React.Component {
               for (var z in chosenAspects) {
                 var asp = chosenAspects[z];
                 if (asp.id == chosenAspect.id && asp != chosenAspect) {
-
+                  console.log("removed " + asp.name)
                 }
                 else {
                   newGoals.push(asp);
