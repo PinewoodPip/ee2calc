@@ -3,7 +3,6 @@ import './App.css';
 import _ from "lodash"
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
-import { result } from 'underscore';
 import { aspects } from "./Data.js" // ascension data goes there
 
 // TODO IF GOAL WAS THE LAST ASPECT AND IS T2, REPLACE IT WITH THE GENERIC T2. DONT DO THIS IF IN SELF-SUSTAIN MODE
@@ -11,6 +10,8 @@ import { aspects } from "./Data.js" // ascension data goes there
 // TODO REORDER THE DISPLAY OF EMBODIMENTS
 
 // TODO HANDLING THE CORE
+
+// TODO PICK GOAL VARIANTS RANDOMLY, ELSE IT WILL ALWAYS GO FOR THE FORCE ONE
 
 // possible minor problem: tier 2s picked in the middle of a build may have +embs we dont care about, although that's unlikely - if it picks ones with beneficial +emb then it should stumble upon a shorter path
 
@@ -20,7 +21,7 @@ import { aspects } from "./Data.js" // ascension data goes there
 
 // TODO REPORT TIED BUILDS
 
-const maxIterations = 2000; // how many random builds are generated and compared
+const maxIterations = 3000; // how many random builds are generated and compared
 const maxAspects = 15; // maximum aspects a build can have
 const pointBudget = 25; // TODO IMPLEMENT
 
@@ -201,9 +202,9 @@ class App extends React.Component {
       selection: [],
       result: null,
       waiting: false,
-      useFullCore: true,
+      useFullCore: false,
       considerDipping: true,
-      selfSustain: false,
+      selfSustain: true,
     }
   }
 
@@ -217,7 +218,7 @@ class App extends React.Component {
 
     // if player chose tier 2s, replace those with generated versions. later we will discard the duplicates once one of the variants has been chosen
     var realList = [];
-    for (var x = 0; x < list.length; x++) {
+    for (var x = 0; x < list.length; x++) { // this works
       var aspect = list[x];
 
       if (aspect.tier == 2) {
@@ -237,9 +238,8 @@ class App extends React.Component {
       }
     }
 
-    console.log(realList); // error, tier 2s are not getting included
+    //console.log(realList);
     list = realList;
-
 
     var newList = {}
     var reqs = {
@@ -299,6 +299,7 @@ class App extends React.Component {
     }
 
     // make sure the aspects we have chosen don't get filtered out.
+    // note to self: how the fuck does this avoid base t2s?
     for (var y in list) {
       if (!newList.hasOwnProperty(list[y].id))
         newList[list[y].id] = list[y];
@@ -321,6 +322,7 @@ class App extends React.Component {
       waiting: true,
     })
 
+    console.log(chosenAspects) // this works
     return {
       reqs: reqs,
       aspects: newList,
@@ -333,15 +335,25 @@ class App extends React.Component {
 
     // step 1: make a list of relevant aspects and gather the total embodiment requirements
     var data = this.filterApplicableAspects(this.state.selection);
+    console.log(data.chosenAspects)
 
+    var bestBuilds = []; // todo
     var bestBuild;
 
+    // quit if nothing was selected
     if (Object.keys(data.chosenAspects).length == 0)
       return;
 
     // step 2: create random builds and save the most point-efficient one
     for (var iteration = 0; iteration < maxIterations; iteration++) {
       var aspects = data.aspects;
+      var chosenAspects = {} // we "shuffle" this
+      for (var b in data.chosenAspects) {
+        chosenAspects[Math.random()] = data.chosenAspects[b];
+      }
+
+      // console.log(data.chosenAspects) // this is wrong, only has 1 t2 variant
+      // console.log(chosenAspects)
 
       console.log("New build comin' up")
       var build = [];
@@ -358,13 +370,23 @@ class App extends React.Component {
         var aspect = _.sample(availableAspects)
         var skipRandomChoice = false;
 
+        // var shuffledChosenAspects = {};
+        // var temp = [];
+        // temp = Object.keys(data.chosenAspects);
+        // shuffle(temp);
+        // console.log(temp);
+        // for (var b = 0; b < temp.length; b++) {
+        //   if (temp[b] != "0")
+        //     shuffledChosenAspects[b] = temp[b];
+        // }
+
         //CHECK IF WE MEET THE REQS FOR THE PLAYER-PICKED NODES, AND IF SO, START PUTTING THOSE IN AND IGNORE THE RANDOMLY PICKED ASPECT
         var breakThis = false;
-        for (var v in data.chosenAspects) {
+        for (var v in chosenAspects) {
           if (breakThis)
             break;
           
-          var chosenAspect = data.chosenAspects[v];
+          var chosenAspect = chosenAspects[v]
 
           if (fullfillsRequirements(build, {chosenAspect}) && !aspectAlreadyPicked(build, chosenAspect)) {
             build.push(chosenAspect)
@@ -377,8 +399,8 @@ class App extends React.Component {
             if (chosenAspect.tier == 2) {
               var newGoals = []
 
-              for (var z in data.chosenAspects) {
-                var asp = data.chosenAspects[z];
+              for (var z in chosenAspects) {
+                var asp = chosenAspects[z];
                 if (asp.id == chosenAspect.id && asp != chosenAspect) {
 
                 }
@@ -389,7 +411,7 @@ class App extends React.Component {
 
               data.chosenAspects = newGoals;
 
-              breakThis = true;
+              breakThis = true; // can we just replace this with break?
             }
 
             break;
@@ -416,8 +438,26 @@ class App extends React.Component {
           allChosenNodesObtained = true;
         }
 
+        // self-sustaining
+        // TODO MAKE IT TRY TO REMOVE THE MOST COSTLY ONES FIRST - to do this. first make an ordered list of aspects from most costly to cheapest
+        // we need to restart the loop after finding one, else it's gonna potentially remove multiple that you wouldnt normally be able to remove, right??
+        var aspectsToRemove = [];
+        var filteredBuild = build;
+        if (allChosenNodesObtained && this.state.selfSustain) {
+          for (var x = 0; x < build.length; x++) {
+            var asp = build[x];
+            var buildWithoutThat = filteredBuild.filter(function(val) {return val != asp });
+
+            if (fullfillsRequirements(buildWithoutThat) && !isInObject(asp, data.chosenAspects) && filteredBuild.includes(asp)) {
+              aspectsToRemove.push(asp);
+              filteredBuild = filteredBuild.filter(function(val) {return val != asp });
+            }
+          }
+        }
+
         // break if we finished picking aspects for this build
-        if (build.length >= maxAspects || allChosenNodesObtained)
+        // note this used to have a || maxaspectsreached check
+        if (allChosenNodesObtained)
           break;
       }
 
@@ -427,15 +467,24 @@ class App extends React.Component {
 
         var buildInfo = {
           aspects: build,
+          aspectsToRemove: aspectsToRemove,
           points: getTotalPoints(build),
+          finalCost: getTotalPoints(filteredBuild),
           totalEmbodiments: getTotalRewards(build),
         }
 
-        // check if new build is more point-efficient
+        // check if new build is more point-efficient or tied, in which case we keep both tracked
         if (bestBuild == undefined)
           bestBuild = buildInfo;
         else if (buildInfo.points < bestBuild.points)
           bestBuild = buildInfo;
+        // if (bestBuilds.length == 0)
+        //   bestBuilds.push(buildInfo);
+        // else if (buildInfo.points < bestBuilds[0].points)
+        //   bestBuilds = [buildInfo];
+        // else if (buildInfo.points == bestBuilds[0].points) {
+        //   bestBuilds.push(buildInfo)
+        // }
       }
     }
 
@@ -474,15 +523,41 @@ class App extends React.Component {
     if (this.state.waiting)
       resultText = "" // removed, didnt work properly anyways
     else if (this.state.result != null) {
-      resultText = "Shortest path found (" + this.state.result.points + " points): ";
+      if (this.state.result.points != this.state.result.finalCost)
+        resultText = "Shortest path found ({0} points to reach, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
+      else
+      resultText = "Shortest path found ({0} points to reach): ".format(this.state.result.points);
 
       for (var x in this.state.result.aspects) {
         resultText += this.state.result.aspects[x].name
 
-        if (x != this.state.result.aspects.length - 1)
+        if (x != this.state.result.aspects.length - 1 || !this.state.result.aspectsToRemove.length == 0)
+          resultText += " -> "
+      }
+
+      for (var z in this.state.result.aspectsToRemove) {
+        resultText += " ❌ " + this.state.result.aspectsToRemove[z].name
+
+        if (z != this.state.result.aspectsToRemove.length - 1)
           resultText += " -> "
       }
     }
+    // else if (this.state.result != null) {
+    //   resultText += <p>Shortest path(s) found:</p>
+    //   for (var x = 0; x < this.state.result.length; x++) {
+    //     var build = this.state.results[x];
+    //     var buildText = "";
+
+    //     for (var z = 0; z < build.aspects.length; z++) {
+    //       buildText += build.aspects[z].name;
+
+    //       if (z != build.aspects.length - 1)
+    //         buildText += " -> ";
+    //     }
+
+    //     resultText += <p>{buildText}</p>
+    //   }
+    //}
 
     // aspect elements
     for (var x in aspects) {
@@ -579,6 +654,33 @@ class App extends React.Component {
 
 // --------- HELPER FUNCTIONS ------------
 
+function shuffle(array) { // https://stackoverflow.com/a/2450976
+  var currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
+}
+
+function isInObject(thing, obj) {
+  for (var x in obj) {
+    if (obj[x] == thing)
+      return true
+  }
+  return false;
+}
+
 function getTotalPoints(build) {
   var points = 0;
   for (var x = 0; x < build.length; x++) {
@@ -645,16 +747,29 @@ function getTotalRewards(aspects) {
   return rewards;
 }
 
-function fullfillsRequirements(build, aspect) {
-  var embodiments = getTotalRewards(build);
-  var reqs = getTotalReqs(aspect);
+function fullfillsRequirements(build, aspect=null) {
+  if (aspect != null) {
+    var embodiments = getTotalRewards(build);
+    var reqs = getTotalReqs(aspect);
 
-  for (var e in reqs) {
-    if (embodiments[e] < reqs[e])
-      return false;
+    for (var e in reqs) {
+      if (embodiments[e] < reqs[e])
+        return false;
+    }
+
+    return true;
   }
+  else {
+    var embodiments = getTotalRewards(build);
+    var reqs = getTotalReqs(build);
 
-  return true;
+    for (var e in reqs) {
+      if (embodiments[e] < reqs[e])
+        return false;
+    }
+
+    return true;
+  }
 }
 
 function aspectAlreadyPicked(build, aspect) {
