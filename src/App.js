@@ -520,7 +520,7 @@ class App extends React.Component {
     if (this.state.waiting)
       resultText = "" // removed, didnt work properly anyways
     else if (this.state.result != null) {
-      resultText += "(mode {0})".format(this.state.preference);
+      //resultText += "(mode {0})".format(this.state.preference);
       if (this.state.result.points != this.state.result.finalCost)
         resultText += "Shortest path found ({0} points to reach, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
       else
@@ -639,6 +639,7 @@ class App extends React.Component {
         </div>
         <div className="bottom-interface">
           <div className="num-input">
+            <p>Builds to try:</p>
             <input type="val" value={this.state.iterations} onChange={(e) => this.setState({iterations: e.target.value})}></input>
           </div>
           <div className="checkbox-bottom-ui">

@@ -296,8 +296,8 @@ export const aspects = {
       family: "entropy",
       tier: 2,
       requirements: {
-        force: 1,
         entropy: 3,
+        force: 1,
         form: 2,
       },
       rewards: {
@@ -313,8 +313,8 @@ export const aspects = {
       family: "entropy",
       tier: 2,
       requirements: {
-        force: 2,
         entropy: 4,
+        force: 2,
       },
       rewards: {
         entropy: 2,
@@ -343,8 +343,8 @@ export const aspects = {
       family: "entropy",
       tier: 2,
       requirements: {
-        force: 1,
         entropy: 5,
+        force: 1,
       },
       rewards: {
         entropy: 3,
@@ -374,8 +374,8 @@ export const aspects = {
       family: "entropy",
       tier: 3,
       requirements: {
-        force: 2,
         entropy: 8,
+        force: 2,
         form: 3,
       },
       rewards: {
@@ -389,8 +389,8 @@ export const aspects = {
       family: "entropy",
       tier: 3,
       requirements: {
-        force: 5,
         entropy: 7,
+        force: 5,
         form: 1,
       },
       rewards: {
@@ -404,8 +404,8 @@ export const aspects = {
       family: "entropy",
       tier: 3,
       requirements: {
-        force: 1,
         entropy: 7,
+        force: 1,
         form: 5,
       },
       rewards: {
@@ -555,8 +555,8 @@ export const aspects = {
       family: "form",
       tier: 2,
       requirements: {
-        inertia: 2,
         form: 3,
+        inertia: 2,
         entropy: 1,
       },
       rewards: {
@@ -573,8 +573,8 @@ export const aspects = {
       family: "form",
       tier: 3,
       requirements: {
-        inertia: 5,
         form: 7,
+        inertia: 5,
         entropy: 1,
       },
       rewards: {
@@ -588,8 +588,8 @@ export const aspects = {
       family: "form",
       tier: 3,
       requirements: {
-        inertia: 1,
         form: 7,
+        inertia: 1,
         entropy: 5,
       },
       rewards: {
@@ -603,8 +603,8 @@ export const aspects = {
       family: "form",
       tier: 3,
       requirements: {
-        inertia: 3,
         form: 8,
+        inertia: 3,
         entropy: 2,
       },
       rewards: {
