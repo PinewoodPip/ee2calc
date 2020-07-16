@@ -7,17 +7,16 @@ import { aspects } from "./Data.js" // ascension data goes there
 
 // TODO IF GOAL WAS THE LAST ASPECT AND IS T2, REPLACE IT WITH THE GENERIC T2. DONT DO THIS IF IN SELF-SUSTAIN MODE
 
-// TODO REORDER THE DISPLAY OF EMBODIMENTS
-
-// TODO ADD TOOLTIPS TO SETTINGS
-
-// possible minor problem: tier 2s picked in the middle of a build may have +embs we dont care about, although that's unlikely - if it picks ones with beneficial +emb then it should stumble upon a shorter path
-
 // TODO IF POINTS BUDGET IS SET, TRY SELF-SUSTAINING WHEN WE RUN OUT OF POINTS WHILE BUILDING, TO KEEP GOING. BENCHMARK THIS WITH DOPPELGANGER @ LVL 9
 
-// Core (Form) -> Silkworm -> Nautilus -> Doppelganger (+force) -> REMOVE NAUTILUS -> 0 1 7 0 0 total embs. it picks the +force version cuz the goals list is always ordered the same and the force variant of a t2 always goes first
-
 // TODO REPORT TIED BUILDS
+
+const strings = {
+  iterations: "How many builds should be randomly generated. With higher amounts the search takes longer but is more likely to find the most efficient build. Keep this in the thousands, and increase it when you're doing crazy searches (4+ aspects chosen)",
+  useFullCore: "Use a full Core instead of its lone nodes. A full Core grants 2 of each embodiments for 5 points.",
+  selfSustain: "If enabled, show aspects which can be removed after completing the chosen aspects.",
+  preference: "Controls the scoring system for builds. The first option will make the search favor builds which require less points to sustain after removing all unnecessary aspects. The second option favors paths which require the least amount of points to reach, but may require more points to sustain."
+}
 
 String.prototype.format = function () { // by gpvos from stackoverflow
   var args = arguments;
@@ -26,15 +25,12 @@ String.prototype.format = function () { // by gpvos from stackoverflow
 
 
 // things to consider:
-// core completion, dipping into tier 2s (auto-generate separate internal aspects to facilitate that)
-
-// REMEMBER WHEN YOU'RE PASSING AN ASPECT AS ARGUMENT, WRAP IT IN {} SO IT'S PROPERLY ITERABLE
+// dipping into tier 2s (auto-generate separate internal aspects to facilitate that)
 
 
 // todo
 // check if aspect amount is not enough to get all
 // add point limit
-// add core settings
 // add dipping
 
 // try to favor aspects with a good point to emb ratio ; for this we need to also calculate a point to emb ratio relative to the embodiments we actually want
@@ -151,7 +147,7 @@ class Aspect extends React.Component {
     var header = (this.props.data.tier != 3) ? "Completion rewards:" : "";
     for (var z in embs) {
       if (embs[z] != 0)
-        text.push(<p key={this.props.data.name + "_tooltip_" + z}>{embs[z] + " " + z.toUpperCase()}</p>);
+        text.push(<p key={this.props.data.name + "_tooltip_" + z}>{embs[z] + " " + capitalizeFirstLetter(z)}</p>);
     }
 
     return <div>
@@ -520,7 +516,7 @@ class App extends React.Component {
     if (this.state.waiting)
       resultText = "" // removed, didnt work properly anyways
     else if (this.state.result != null) {
-      //resultText += "(mode {0})".format(this.state.preference);
+      //resultText += "(mode {0}) ".format(this.state.preference);
       if (this.state.result.points != this.state.result.finalCost)
         resultText += "Shortest path found ({0} points to reach, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
       else
@@ -540,22 +536,6 @@ class App extends React.Component {
           resultText += " -> "
       }
     }
-    // else if (this.state.result != null) {
-    //   resultText += <p>Shortest path(s) found:</p>
-    //   for (var x = 0; x < this.state.result.length; x++) {
-    //     var build = this.state.results[x];
-    //     var buildText = "";
-
-    //     for (var z = 0; z < build.aspects.length; z++) {
-    //       buildText += build.aspects[z].name;
-
-    //       if (z != build.aspects.length - 1)
-    //         buildText += " -> ";
-    //     }
-
-    //     resultText += <p>{buildText}</p>
-    //   }
-    //}
 
     // aspect elements
     for (var x in aspects) {
@@ -638,24 +618,34 @@ class App extends React.Component {
           </div>
         </div>
         <div className="bottom-interface">
-          <div className="num-input">
-            <p>Builds to try:</p>
-            <input type="val" value={this.state.iterations} onChange={(e) => this.setState({iterations: e.target.value})}></input>
-          </div>
-          <div className="checkbox-bottom-ui">
-            <input type="checkbox" checked={this.state.useFullCore} onChange={(e) => this.setState({useFullCore: e.target.checked})}></input>
-            <p>Use a full Core</p>
-          </div>
-          <div className="checkbox-bottom-ui">
-            <input type="checkbox" checked={this.state.selfSustain} onChange={(e) => this.setState({selfSustain: e.target.checked})}></input>
-            <p>Self-sustain</p>
-          </div>
-          <div className="dropdown">
-            <select onChange={(e) => this.setState({preference: e.target.value})}>
-              <option value="0">Prefer builds with lower final cost</option>
-              <option value="1">Prefer builds with fewer points needed to reach</option>
-            </select>
-          </div>
+          <Tippy content={strings.iterations} placement="bottom" duration="0">
+            <div className="num-input">
+              <p>Builds to try:</p>
+              <input type="val" value={this.state.iterations} onChange={(e) => this.setState({iterations: e.target.value})}></input>
+            </div>
+          </Tippy>
+          <Tippy content={strings.useFullCore} placement="bottom" duration="0">
+            <div className="checkbox-bottom-ui">
+              <input type="checkbox" checked={this.state.useFullCore} onChange={(e) => this.setState({useFullCore: e.target.checked})}></input>
+              <p>Use a full Core</p>
+            </div>
+          </Tippy>
+          <Tippy content={strings.selfSustain} placement="bottom" duration="0">
+            <div className="checkbox-bottom-ui">
+              <input type="checkbox" checked={this.state.selfSustain} onChange={(e) => this.setState({selfSustain: e.target.checked})}></input>
+              <p>Self-sustain</p>
+            </div>
+          </Tippy>
+          <Tippy content={strings.preference} placement="bottom" duration="0">
+            <div className="dropdown">
+              <select onChange={(e) => this.setState({preference: e.target.value})}>
+                <option value="0">Prefer builds with lower final cost</option>
+                <option value="1">Prefer builds with fewer points needed to reach</option>
+              </select>
+            </div>
+          </Tippy>
+        </div>
+        <div className="bottom-interface column">
           <button onClick={() => this.calculate()}>Search shortest path</button>
           <p>{resultText}</p>
         </div>
@@ -683,6 +673,10 @@ function shuffle(array) { // https://stackoverflow.com/a/2450976
   }
 
   return array;
+}
+
+function capitalizeFirstLetter(string) { // https://stackoverflow.com/a/1026087
+  return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 function isInObject(thing, obj) {
