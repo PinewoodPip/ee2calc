@@ -205,13 +205,8 @@ class App extends React.Component {
       useFullCore: false,
       considerDipping: true,
       selfSustain: true,
+      pointsBudget: 25,
     }
-  }
-
-  updateUseFullCore(newBool) {
-    this.setState({
-      useFullCore: newBool,
-    })
   }
 
   filterApplicableAspects(list) { // list is chosen aspects
@@ -225,8 +220,8 @@ class App extends React.Component {
         for (var z in aspects) { // oh man this is getting tedious
           var asp = aspects[z];
 
-          if (asp.generated != undefined)
-            console.log(asp);
+          // if (asp.generated != undefined)
+          //   console.log(asp);
 
           if (asp.id == aspect.id && asp.generated == true) {
             realList.push(asp);
@@ -334,6 +329,7 @@ class App extends React.Component {
 
     // step 1: make a list of relevant aspects and gather the total embodiment requirements
     var data = this.filterApplicableAspects(this.state.selection);
+    console.log(data.chosenAspects)
 
     var bestBuilds = []; // todo
     var bestBuild;
@@ -342,6 +338,7 @@ class App extends React.Component {
     if (Object.keys(data.chosenAspects).length == 0)
       return;
 
+    // IT'S IN THE LOOPS AFTER 1 THAT CHOSENASPECTS GETS FUCKED. i changed .data.aspects in the newgoals loop. now it doesnt work for t2s
     // step 2: create random builds and save the most point-efficient one
     for (var iteration = 0; iteration < maxIterations; iteration++) {
       var aspects = data.aspects;
@@ -350,7 +347,7 @@ class App extends React.Component {
         chosenAspects[Math.random()] = data.chosenAspects[b];
       }
 
-      //console.log(chosenAspects)
+      console.log(chosenAspects)
 
       console.log("New build comin' up")
       var build = [];
@@ -376,6 +373,7 @@ class App extends React.Component {
           var chosenAspect = chosenAspects[v]
 
           if (fullfillsRequirements(build, {chosenAspect}) && !aspectAlreadyPicked(build, chosenAspect)) {
+            console.log(chosenAspects[Object.keys(chosenAspects)[0]])
             build.push(chosenAspect)
 
             skipRandomChoice = true;
@@ -396,7 +394,7 @@ class App extends React.Component {
                 }
               }
 
-              data.chosenAspects = newGoals;
+              chosenAspects = newGoals;
 
               breakThis = true; // can we just replace this with break?
             }
@@ -406,7 +404,7 @@ class App extends React.Component {
         }
 
         if (!skipRandomChoice) {
-          // choose it if we can and if we dont already have it in some way
+          // choose it if we can and if we dont already have it in some way (relevant for t2s)
           if (fullfillsRequirements(build, {aspect}) && !aspectAlreadyPicked(build, aspect)) {
             build.push(aspect)
 
@@ -415,9 +413,18 @@ class App extends React.Component {
         }
 
         // check if we got all the nodes we wanted
+        // var allChosenNodesObtained = false;
+        // for (var n in data.chosenAspects) {
+        //   if (!build.includes(data.chosenAspects[n])) {
+        //     allChosenNodesObtained = false;
+        //     break;
+        //   }
+
+        //   allChosenNodesObtained = true;
+        // }
         var allChosenNodesObtained = false;
-        for (var n in data.chosenAspects) {
-          if (!build.includes(data.chosenAspects[n])) {
+        for (var n in chosenAspects) {
+          if (!build.includes(chosenAspects[n])) {
             allChosenNodesObtained = false;
             break;
           }
@@ -463,7 +470,7 @@ class App extends React.Component {
         // check if new build is more point-efficient or tied, in which case we keep both tracked
         if (bestBuild == undefined)
           bestBuild = buildInfo;
-        else if (buildInfo.points < bestBuild.points)
+        else if (buildInfo.points < bestBuild.points && buildInfo.points <= this.state.pointsBudget) // favoring finalCost doesnt really work, it picks 50-point builds
           bestBuild = buildInfo;
         // if (bestBuilds.length == 0)
         //   bestBuilds.push(buildInfo);
@@ -628,8 +635,12 @@ class App extends React.Component {
         </div>
         <div className="bottom-interface">
           <div className="checkbox-bottom-ui">
-            <input type="checkbox" checked={this.state.useFullCore} onChange={(e) => this.updateUseFullCore(e.target.checked)}></input>
+            <input type="checkbox" checked={this.state.useFullCore} onChange={(e) => this.setState({useFullCore: e.target.checked})}></input>
             <p>Use a full Core</p>
+          </div>
+          <div className="checkbox-bottom-ui">
+            <input type="checkbox" checked={this.state.selfSustain} onChange={(e) => this.setState({selfSustain: e.target.checked})}></input>
+            <p>Self-sustain</p>
           </div>
           <button onClick={() => this.calculate()}>Search shortest path</button>
           <p>{resultText}</p>

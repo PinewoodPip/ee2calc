@@ -354,7 +354,7 @@ export const aspects = {
     },
     supplicant: {
       name: "Supplicant",
-      id: "wolf",
+      id: "supplicant",
       family: "entropy",
       tier: 2,
       requirements: {
