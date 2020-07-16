@@ -9,9 +9,7 @@ import { aspects } from "./Data.js" // ascension data goes there
 
 // TODO REORDER THE DISPLAY OF EMBODIMENTS
 
-// TODO HANDLING THE CORE
-
-// TODO PICK GOAL VARIANTS RANDOMLY, ELSE IT WILL ALWAYS GO FOR THE FORCE ONE
+// TODO ADD TOOLTIPS TO SETTINGS
 
 // possible minor problem: tier 2s picked in the middle of a build may have +embs we dont care about, although that's unlikely - if it picks ones with beneficial +emb then it should stumble upon a shorter path
 
@@ -20,10 +18,6 @@ import { aspects } from "./Data.js" // ascension data goes there
 // Core (Form) -> Silkworm -> Nautilus -> Doppelganger (+force) -> REMOVE NAUTILUS -> 0 1 7 0 0 total embs. it picks the +force version cuz the goals list is always ordered the same and the force variant of a t2 always goes first
 
 // TODO REPORT TIED BUILDS
-
-const maxIterations = 3000; // how many random builds are generated and compared
-const maxAspects = 15; // maximum aspects a build can have
-const pointBudget = 25; // TODO IMPLEMENT
 
 String.prototype.format = function () { // by gpvos from stackoverflow
   var args = arguments;
@@ -206,8 +200,9 @@ class App extends React.Component {
       useFullCore: false,
       considerDipping: true,
       selfSustain: true,
-      pointsBudget: 25,
-      preference: "0",
+      pointsBudget: 25, // unused atm
+      preference: "0", // scoring mode
+      iterations: 5000, // how many random builds are generated and compared
     }
   }
 
@@ -348,7 +343,7 @@ class App extends React.Component {
 
     // IT'S IN THE LOOPS AFTER 1 THAT CHOSENASPECTS GETS FUCKED. i changed .data.aspects in the newgoals loop. now it doesnt work for t2s
     // step 2: create random builds and save the most point-efficient one
-    for (var iteration = 0; iteration < maxIterations; iteration++) {
+    for (var iteration = 0; iteration < this.state.iterations; iteration++) {
       var aspects = data.aspects;
       var chosenAspects = [] // we "shuffle" this.
       for (var x in data.chosenAspects) {
@@ -525,10 +520,11 @@ class App extends React.Component {
     if (this.state.waiting)
       resultText = "" // removed, didnt work properly anyways
     else if (this.state.result != null) {
+      resultText += "(mode {0})".format(this.state.preference);
       if (this.state.result.points != this.state.result.finalCost)
-        resultText = "Shortest path found ({0} points to reach, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
+        resultText += "Shortest path found ({0} points to reach, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
       else
-      resultText = "Shortest path found ({0} points to reach): ".format(this.state.result.points);
+      resultText += "Shortest path found ({0} points to reach): ".format(this.state.result.points);
 
       for (var x in this.state.result.aspects) {
         resultText += this.state.result.aspects[x].name
@@ -642,6 +638,9 @@ class App extends React.Component {
           </div>
         </div>
         <div className="bottom-interface">
+          <div className="num-input">
+            <input type="val" value={this.state.iterations} onChange={(e) => this.setState({iterations: e.target.value})}></input>
+          </div>
           <div className="checkbox-bottom-ui">
             <input type="checkbox" checked={this.state.useFullCore} onChange={(e) => this.setState({useFullCore: e.target.checked})}></input>
             <p>Use a full Core</p>
@@ -652,8 +651,8 @@ class App extends React.Component {
           </div>
           <div className="dropdown">
             <select onChange={(e) => this.setState({preference: e.target.value})}>
-              <option value="0">Value builds with lower final cost</option>
-              <option value="1">Value builds with lower points needed to reach</option>
+              <option value="0">Prefer builds with lower final cost</option>
+              <option value="1">Prefer builds with fewer points needed to reach</option>
             </select>
           </div>
           <button onClick={() => this.calculate()}>Search shortest path</button>

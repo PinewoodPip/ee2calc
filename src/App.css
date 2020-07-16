@@ -19,6 +19,7 @@ button {
 
 .dropdown select {
   height: 100%;
+  /* padding: 5px; */
 }
 
 hr {
