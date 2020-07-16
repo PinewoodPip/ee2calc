@@ -320,14 +320,6 @@ class App extends React.Component {
         chosenAspects[b] = list[b];
     }
 
-    // for (var z in chosenAspects) {
-    //   var asp = chosenAspects[z];
-
-    //   if (asp.generated != undefined && reqs[asp.extraEmbodimentType] == 0) {
-    //     console.log("unneeded " + asp.name)
-    //   }
-    // }
-
     this.setState({
       waiting: true,
     })
@@ -363,8 +355,6 @@ class App extends React.Component {
       }
       shuffle(chosenAspects);
 
-
-      console.log("New build comin' up")
       var build = [];
 
       var availableAspects = {}; // unnecessary? we dont edit this list
@@ -472,19 +462,22 @@ class App extends React.Component {
       // < ! > Sometimes a build comes up with 0 aspects and points. I assume this happens when the find-aspects loop has finished and somehow, miraculously, all ~2000 attempts to find a starting point for the build have failed.
       if (build.length != 0) {
         console.log(build);
+        var pointsToReach = getTotalPoints(build);
+        var pointsToSustain = getTotalPoints(filteredBuild)
 
         var buildInfo = {
           aspects: build,
           aspectsToRemove: aspectsToRemove,
-          points: getTotalPoints(build),
-          finalCost: getTotalPoints(filteredBuild),
+          points: pointsToReach,
+          finalCost: pointsToSustain,
+          score: pointsToReach + pointsToSustain,
           totalEmbodiments: getTotalRewards(build),
         }
 
         // check if new build is more point-efficient or tied, in which case we keep both tracked
         if (bestBuild == undefined)
           bestBuild = buildInfo;
-        else if (buildInfo.points < bestBuild.points && buildInfo.points <= this.state.pointsBudget) // favoring finalCost doesnt really work, it picks 50-point builds
+        else if (buildInfo.score < bestBuild.score && buildInfo.points <= this.state.pointsBudget) // favoring finalCost doesnt really work, it picks 50-point builds
           bestBuild = buildInfo;
         // if (bestBuilds.length == 0)
         //   bestBuilds.push(buildInfo);
