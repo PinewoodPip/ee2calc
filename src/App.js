@@ -78,6 +78,7 @@ for (var x in aspects) {
         nodes: aspect.nodes,
         hasChoiceNode: aspect.hasChoiceNode,
         generated: true, // if this property exists, aspect does not render in UI
+        extraEmbodimentType: z,
       };
 
       for (var v in aspect.rewards) {
@@ -217,11 +218,8 @@ class App extends React.Component {
       var aspect = list[x];
 
       if (aspect.tier == 2) {
-        for (var z in aspects) { // oh man this is getting tedious
+        for (var z in aspects) {
           var asp = aspects[z];
-
-          // if (asp.generated != undefined)
-          //   console.log(asp);
 
           if (asp.id == aspect.id && asp.generated == true) {
             realList.push(asp);
@@ -260,6 +258,10 @@ class App extends React.Component {
           return false;
         // else if (aspect.isCoreNode == undefined)
         //   realList.push(aspect);
+
+        // filter out t2 variants that don't have a relevant +emb
+        if (aspect.generated != undefined && reqs[aspect.extraEmbodimentType] == 0)
+          return false;
 
         // if an aspect rewards a type of embodiment we need, it's valid. Otherwise we discard it
         if (reward > 0 && reqs[x] > 0)
@@ -308,10 +310,23 @@ class App extends React.Component {
         aspectWithHighestRequirements = newList[i];
     }
 
-    var chosenAspects = {}; // turn it into object
+    var chosenAspects = {}; // turn it into object and filter out irrelevant t2 variants
     for (var b = 0; b < list.length; b++) {
-      chosenAspects[b] = list[b];
+      var asp = list[b]
+      if (asp.generated != undefined && reqs[asp.extraEmbodimentType] == 0) {
+        console.log("unneeded " + asp.name)
+      }
+      else
+        chosenAspects[b] = list[b];
     }
+
+    // for (var z in chosenAspects) {
+    //   var asp = chosenAspects[z];
+
+    //   if (asp.generated != undefined && reqs[asp.extraEmbodimentType] == 0) {
+    //     console.log("unneeded " + asp.name)
+    //   }
+    // }
 
     this.setState({
       waiting: true,
@@ -342,12 +357,12 @@ class App extends React.Component {
     // step 2: create random builds and save the most point-efficient one
     for (var iteration = 0; iteration < maxIterations; iteration++) {
       var aspects = data.aspects;
-      var chosenAspects = {} // we "shuffle" this. seems to work
-      for (var b in data.chosenAspects) { // the chance of stuff getting tied is almost 0 but it's there
-        chosenAspects[Math.random()] = data.chosenAspects[b];
+      var chosenAspects = [] // we "shuffle" this.
+      for (var x in data.chosenAspects) {
+        chosenAspects.push(data.chosenAspects[x]);
       }
+      shuffle(chosenAspects);
 
-      console.log(chosenAspects)
 
       console.log("New build comin' up")
       var build = [];
@@ -373,7 +388,6 @@ class App extends React.Component {
           var chosenAspect = chosenAspects[v]
 
           if (fullfillsRequirements(build, {chosenAspect}) && !aspectAlreadyPicked(build, chosenAspect)) {
-            console.log(chosenAspects[Object.keys(chosenAspects)[0]])
             build.push(chosenAspect)
 
             skipRandomChoice = true;
