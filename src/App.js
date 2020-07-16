@@ -207,6 +207,7 @@ class App extends React.Component {
       considerDipping: true,
       selfSustain: true,
       pointsBudget: 25,
+      preference: "0",
     }
   }
 
@@ -470,7 +471,7 @@ class App extends React.Component {
           aspectsToRemove: aspectsToRemove,
           points: pointsToReach,
           finalCost: pointsToSustain,
-          score: pointsToReach + pointsToSustain,
+          score: pointsToReach + pointsToSustain + ((this.state.preference == "0") ? 0 : build.length), // less aspects = better, discourages needlessly picking builds only to despec them later
           totalEmbodiments: getTotalRewards(build),
         }
 
@@ -648,6 +649,12 @@ class App extends React.Component {
           <div className="checkbox-bottom-ui">
             <input type="checkbox" checked={this.state.selfSustain} onChange={(e) => this.setState({selfSustain: e.target.checked})}></input>
             <p>Self-sustain</p>
+          </div>
+          <div className="dropdown">
+            <select onChange={(e) => this.setState({preference: e.target.value})}>
+              <option value="0">Value builds with lower final cost</option>
+              <option value="1">Value builds with lower points needed to reach</option>
+            </select>
           </div>
           <button onClick={() => this.calculate()}>Search shortest path</button>
           <p>{resultText}</p>

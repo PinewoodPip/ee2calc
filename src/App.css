@@ -8,6 +8,19 @@
   margin: 25px;
 }
 
+button {
+  margin: 8px;
+}
+
+.dropdown {
+  margin: 8px;
+  height: 25px;
+}
+
+.dropdown select {
+  height: 100%;
+}
+
 hr {
   width: 90%;
   margin: 7px
