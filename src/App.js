@@ -12,9 +12,9 @@ import { aspects } from "./Data.js" // ascension data goes there
 // TODO REPORT TIED BUILDS
 
 const strings = {
-  iterations: "How many builds should be randomly generated. With higher amounts the search takes longer but is more likely to find the most efficient build. Keep this in the thousands, and increase it when you're doing crazy searches (4+ aspects chosen)",
+  iterations: "How many builds should be randomly generated. With higher amounts the search takes longer but is more likely to find the most efficient build. Keep this in the thousands, and increase it when you're doing crazy searches (4+ aspects chosen).",
   useFullCore: "Use a full Core instead of its lone nodes. A full Core grants 2 of each embodiments for 5 points.",
-  selfSustain: "If enabled, show aspects which can be removed after completing the chosen aspects.",
+  selfSustain: "If enabled, shows aspects which can be removed after completing the chosen aspects.",
   preference: "Controls the scoring system for builds. The first option will make the search favor builds which require less points to sustain after removing all unnecessary aspects. The second option favors paths which require the least amount of points to reach, but may require more points to sustain."
 }
 

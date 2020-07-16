@@ -47,6 +47,11 @@ hr {
   flex-direction: row;
 }
 
+.bottom-interface.column p {
+  margin-left: 130px;
+  margin-right: 130px;
+}
+
 .column {
   flex-direction: column;
 }
