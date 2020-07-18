@@ -58,13 +58,6 @@ for (var x in aspects) {
         tier: aspect.tier,
         requirements: aspect.requirements, // does this reference or copy??
         rewards: {},
-        // rewards: {
-        //   force: (aspect.rewards.force != undefined) ? aspect.rewards.force : undefined,
-        //   entropy: aspect.rewards.entropy,
-        //   form: aspect.rewards.form,
-        //   inertia: aspect.rewards.inertia,
-        //   life: aspect.rewards.life,
-        // },
         nodes: aspect.nodes,
         hasChoiceNode: aspect.hasChoiceNode,
         generated: true, // if this property exists, aspect does not render in UI
@@ -83,6 +76,30 @@ for (var x in aspects) {
       num++;
 
       extraAspects[num] = newAspect;
+    }
+
+    // generate dipping aspects
+    for (var b in embs) {
+      var newAspect = {
+        name: aspect.name + " (dip, +{0})".format(b),
+        id: aspect.id, // same id so the calc function doesnt pick multiple
+        family: "special",
+        tier: aspect.tier,
+        requirements: aspect.requirements,
+        rewards: {},
+        nodes: 2, // dipping aspects only have 2 nodes
+        hasChoiceNode: aspect.hasChoiceNode,
+        dipping: true,
+        generated: true, // if this property exists, aspect does not render in UI
+        extraEmbodimentType: b,
+      };
+
+      newAspect.rewards[b] = 1; // tier 2 dips reward 1 embodiment
+
+      num++;
+
+      extraAspects[num] = newAspect;
+      console.log(newAspect)
     }
   }
 }
@@ -194,7 +211,7 @@ class App extends React.Component {
       result: null,
       waiting: false,
       useFullCore: false,
-      considerDipping: true,
+      considerDipping: false,
       selfSustain: true,
       pointsBudget: 25, // unused atm
       preference: "0", // scoring mode
@@ -239,6 +256,9 @@ class App extends React.Component {
       for (var x in aspect.rewards) {
         var reward = aspect.rewards[x];
 
+        if (aspect.dipping && !this.state.considerDipping)
+          return false;
+
         // !!! always ignore base tier 2s !!!, use only the generated versions, which have the +embodiment node considered
         if (aspect.tier == 2 && aspect.generated == undefined)
           return false;
@@ -248,8 +268,6 @@ class App extends React.Component {
           return false;
         else if (aspect.isCoreNode && this.state.useFullCore)
           return false;
-        // else if (aspect.isCoreNode == undefined)
-        //   realList.push(aspect);
 
         // filter out t2 variants that don't have a relevant +emb
         if (aspect.generated != undefined && reqs[aspect.extraEmbodimentType] == 0)
@@ -305,7 +323,7 @@ class App extends React.Component {
     var chosenAspects = {}; // turn it into object and filter out irrelevant t2 variants
     for (var b = 0; b < list.length; b++) {
       var asp = list[b]
-      if (asp.generated != undefined && reqs[asp.extraEmbodimentType] == 0) {
+      if ((asp.generated != undefined && reqs[asp.extraEmbodimentType] == 0) || asp.dipping != undefined) {
         console.log("unneeded " + asp.name)
       }
       else
@@ -628,6 +646,12 @@ class App extends React.Component {
             <div className="checkbox-bottom-ui">
               <input type="checkbox" checked={this.state.useFullCore} onChange={(e) => this.setState({useFullCore: e.target.checked})}></input>
               <p>Use a full Core</p>
+            </div>
+          </Tippy>
+          <Tippy content={strings.considerDipping} placement="bottom" duration="0">
+            <div className="checkbox-bottom-ui">
+              <input type="checkbox" checked={this.state.considerDipping} onChange={(e) => this.setState({considerDipping: e.target.checked})}></input>
+              <p>Consider 'dipping' tier 2 aspects</p>
             </div>
           </Tippy>
           <Tippy content={strings.selfSustain} placement="bottom" duration="0">
