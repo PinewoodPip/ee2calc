@@ -302,7 +302,7 @@ export const aspects = {
       },
       rewards: {
         entropy: 2,
-        force: 1,
+        form: 1,
       },
       nodes: 5,
       hasChoiceNode: true,
