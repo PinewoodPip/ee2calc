@@ -5,12 +5,6 @@ import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import { aspects } from "./Data.js" // ascension data goes there
 
-// TODO IF GOAL WAS THE LAST ASPECT AND IS T2, REPLACE IT WITH THE GENERIC T2. DONT DO THIS IF IN SELF-SUSTAIN MODE
-
-// TODO IF POINTS BUDGET IS SET, TRY SELF-SUSTAINING WHEN WE RUN OUT OF POINTS WHILE BUILDING, TO KEEP GOING. BENCHMARK THIS WITH DOPPELGANGER @ LVL 9
-
-// TODO REPORT TIED BUILDS
-
 const strings = {
   iterations: "How many builds should be randomly generated. With higher amounts the search takes longer but is more likely to find the most efficient build. Keep this in the thousands, and increase it when you're doing crazy searches (4+ aspects chosen).",
   useFullCore: "Use a full Core instead of its lone nodes. A full Core grants 2 of each embodiments for 5 points.",
@@ -22,18 +16,6 @@ String.prototype.format = function () { // by gpvos from stackoverflow
   var args = arguments;
   return this.replace(/\{(\d+)\}/g, function (m, n) { return args[n]; });
 };
-
-
-// things to consider:
-// dipping into tier 2s (auto-generate separate internal aspects to facilitate that)
-
-
-// todo
-// check if aspect amount is not enough to get all
-// add point limit
-// add dipping
-
-// try to favor aspects with a good point to emb ratio ; for this we need to also calculate a point to emb ratio relative to the embodiments we actually want
 
 // generate a new "internal" aspect for each tier 2 aspect, one for each different embodiment rewards you can choose in node 2.
 var num = 999; // object key for these aspects, starts at high number to uhm... avoid any problems
@@ -78,7 +60,7 @@ for (var x in aspects) {
       extraAspects[num] = newAspect;
     }
 
-    // generate dipping aspects
+    // generate dipping aspects, which only have 2 nodes and grant 1 embodiment
     for (var b in embs) {
       var newAspect = {
         name: aspect.name + " (dip, +{0})".format(b),
@@ -123,11 +105,6 @@ for (var x in aspects) {
     aspect.totalRequirements += aspect.requirements[z];
   }
 }
-
-
-
-// generate "dipping" aspects for tier 2s, which only have 2 nodes, up until the one that gives an embodiment
-// TODO
 
 class Aspect extends React.Component {
   getRequirementsText() {
@@ -240,7 +217,6 @@ class App extends React.Component {
       }
     }
 
-    //console.log(realList);
     list = realList;
 
     var newList = {}
@@ -355,7 +331,6 @@ class App extends React.Component {
     if (Object.keys(data.chosenAspects).length == 0)
       return;
 
-    // IT'S IN THE LOOPS AFTER 1 THAT CHOSENASPECTS GETS FUCKED. i changed .data.aspects in the newgoals loop. now it doesnt work for t2s
     // step 2: create random builds and save the most point-efficient one
     for (var iteration = 0; iteration < this.state.iterations; iteration++) {
       var aspects = data.aspects;
@@ -372,7 +347,6 @@ class App extends React.Component {
         availableAspects[u] = aspects[u]
       }
 
-      var failed = false;
       for (var attempts = 0; attempts < 2000; attempts++) {
 
         // pick random aspect
@@ -427,15 +401,6 @@ class App extends React.Component {
         }
 
         // check if we got all the nodes we wanted
-        // var allChosenNodesObtained = false;
-        // for (var n in data.chosenAspects) {
-        //   if (!build.includes(data.chosenAspects[n])) {
-        //     allChosenNodesObtained = false;
-        //     break;
-        //   }
-
-        //   allChosenNodesObtained = true;
-        // }
         var allChosenNodesObtained = false;
         for (var n in chosenAspects) {
           if (!build.includes(chosenAspects[n])) {
@@ -447,8 +412,7 @@ class App extends React.Component {
         }
 
         // self-sustaining
-        // TODO MAKE IT TRY TO REMOVE THE MOST COSTLY ONES FIRST - to do this. first make an ordered list of aspects from most costly to cheapest
-        // we need to restart the loop after finding one, else it's gonna potentially remove multiple that you wouldnt normally be able to remove, right??
+        // TODO MAKE IT TRY TO REMOVE THE MOST COSTLY ONES FIRST - to do this, first make an ordered list of aspects from most costly to cheapest
         var aspectsToRemove = [];
         var filteredBuild = build;
         if (allChosenNodesObtained && this.state.selfSustain) {
@@ -464,7 +428,6 @@ class App extends React.Component {
         }
 
         // break if we finished picking aspects for this build
-        // note this used to have a || maxaspectsreached check
         if (allChosenNodesObtained)
           break;
       }
@@ -487,15 +450,8 @@ class App extends React.Component {
         // check if new build is more point-efficient or tied, in which case we keep both tracked
         if (bestBuild == undefined)
           bestBuild = buildInfo;
-        else if (buildInfo.score < bestBuild.score && buildInfo.points <= this.state.pointsBudget) // favoring finalCost doesnt really work, it picks 50-point builds
+        else if (buildInfo.score < bestBuild.score && buildInfo.points <= this.state.pointsBudget) // favoring only finalCost doesnt really work, it picks 50-point builds
           bestBuild = buildInfo;
-        // if (bestBuilds.length == 0)
-        //   bestBuilds.push(buildInfo);
-        // else if (buildInfo.points < bestBuilds[0].points)
-        //   bestBuilds = [buildInfo];
-        // else if (buildInfo.points == bestBuilds[0].points) {
-        //   bestBuilds.push(buildInfo)
-        // }
       }
     }
 
@@ -534,7 +490,6 @@ class App extends React.Component {
     if (this.state.waiting)
       resultText = "" // removed, didnt work properly anyways
     else if (this.state.result != null) {
-      //resultText += "(mode {0}) ".format(this.state.preference);
       if (this.state.result.points != this.state.result.finalCost)
         resultText += "Shortest path found ({0} points to reach, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
       else
@@ -672,6 +627,9 @@ class App extends React.Component {
         <div className="bottom-interface column">
           <button onClick={() => this.calculate()}>Search shortest path</button>
           <p>{resultText}</p>
+        </div>
+        <div className="source-code-link">
+          <a href="https://github.com/PinewoodPip/ee2calc">Source code</a>
         </div>
       </div>
     )
