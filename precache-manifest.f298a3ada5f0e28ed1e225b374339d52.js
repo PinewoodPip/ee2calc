@@ -1,6 +1,6 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "44bce8f76e8f34687e13a382eff2d10d",
+    "revision": "4b25dce7c32d8ae10acb7af257c5727d",
     "url": "/ee2calc/index.html"
   },
   {
@@ -8,7 +8,7 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/ee2calc/static/css/2.a8f673c4.chunk.css"
   },
   {
-    "revision": "10d690cf3a3ed68d5f72",
+    "revision": "b7d2339057901672416f",
     "url": "/ee2calc/static/css/main.03e67db6.chunk.css"
   },
   {
@@ -20,8 +20,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/ee2calc/static/js/2.5409a51f.chunk.js.LICENSE.txt"
   },
   {
-    "revision": "10d690cf3a3ed68d5f72",
-    "url": "/ee2calc/static/js/main.41f08b7d.chunk.js"
+    "revision": "b7d2339057901672416f",
+    "url": "/ee2calc/static/js/main.93d09ca0.chunk.js"
   },
   {
     "revision": "57bd3969c51cbf2a98a8",
