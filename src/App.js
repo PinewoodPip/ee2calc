@@ -7,9 +7,10 @@ import { aspects } from "./Data.js" // ascension data goes there
 
 const strings = {
   iterations: "How many builds should be randomly generated. With higher amounts the search takes longer but is more likely to find the most efficient build. Keep this in the thousands, and increase it when you're doing crazy searches (4+ aspects chosen).",
-  useFullCore: "Use a full Core instead of its lone nodes. A full Core grants 2 of each embodiments for 5 points.",
+  useFullCore: "Use a full Core instead of its lone nodes. A full Core grants 2 of each embodiment for 5 points.",
   selfSustain: "If enabled, shows aspects which can be removed after completing the chosen aspects.",
-  preference: "Controls the scoring system for builds. The first option will make the search favor builds which require less points to sustain after removing all unnecessary aspects. The second option favors paths which require the least amount of points to reach, but may require more points to sustain."
+  preference: "Controls the scoring system for builds. The first option will make the search favor builds which require less points to sustain after removing all unnecessary aspects. The second option favors paths which require the least amount of points to reach, but may require more points to sustain.",
+  considerDipping: "If enabled, the search will include the possibility of 'dipping' into a tier 2 aspects to get the embodiment reward on their second node, for only 2 points. This is rarely ever useful for finding shortest paths. If you're using this, you should increase the 'builds to try' setting considerably.",
 }
 
 String.prototype.format = function () { // by gpvos from stackoverflow
@@ -606,7 +607,7 @@ class App extends React.Component {
           <Tippy content={strings.considerDipping} placement="bottom" duration="0">
             <div className="checkbox-bottom-ui">
               <input type="checkbox" checked={this.state.considerDipping} onChange={(e) => this.setState({considerDipping: e.target.checked})}></input>
-              <p>Consider 'dipping' tier 2 aspects</p>
+              <p>Consider dipping tier 2 aspects</p>
             </div>
           </Tippy>
           <Tippy content={strings.selfSustain} placement="bottom" duration="0">
