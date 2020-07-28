@@ -191,7 +191,7 @@ class App extends React.Component {
       useFullCore: false,
       considerDipping: false,
       selfSustain: true,
-      pointsBudget: 25, // unused atm
+      pointsBudget: 25,
       preference: "0", // scoring mode
       iterations: 5000, // how many random builds are generated and compared
     }
@@ -491,23 +491,30 @@ class App extends React.Component {
     if (this.state.waiting)
       resultText = "" // removed, didnt work properly anyways
     else if (this.state.result != null) {
-      if (this.state.result.points != this.state.result.finalCost)
-        resultText += "Shortest path found ({0} points to reach, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
-      else
-      resultText += "Shortest path found ({0} points to reach): ".format(this.state.result.points);
-
-      for (var x in this.state.result.aspects) {
-        resultText += this.state.result.aspects[x].name
-
-        if (x != this.state.result.aspects.length - 1 || !this.state.result.aspectsToRemove.length == 0)
-          resultText += " -> "
+      if (this.state.result.finalCost > this.state.pointsBudget) {
+        resultText += "Couldn't find any path that costs less than {0} points.".format(this.state.pointsBudget)
+        // log the build anyways
+        console.log(this.state.result)
       }
+      else {
+        if (this.state.result.points != this.state.result.finalCost)
+        resultText += "Shortest path found ({0} points to reach, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
+        else
+        resultText += "Shortest path found ({0} points to reach): ".format(this.state.result.points);
 
-      for (var z in this.state.result.aspectsToRemove) {
-        resultText += " ❌ " + this.state.result.aspectsToRemove[z].name
+        for (var x in this.state.result.aspects) {
+          resultText += this.state.result.aspects[x].name
 
-        if (z != this.state.result.aspectsToRemove.length - 1)
-          resultText += " -> "
+          if (x != this.state.result.aspects.length - 1 || !this.state.result.aspectsToRemove.length == 0)
+            resultText += " -> "
+        }
+
+        for (var z in this.state.result.aspectsToRemove) {
+          resultText += " ❌ " + this.state.result.aspectsToRemove[z].name
+
+          if (z != this.state.result.aspectsToRemove.length - 1)
+            resultText += " -> "
+        }
       }
     }
 
