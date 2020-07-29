@@ -367,6 +367,12 @@ class App extends React.Component {
 
     // step 1: make a list of relevant aspects and gather the total embodiment requirements
     var data = this.filterApplicableAspects(this.state.selection);
+
+    // warn if the user has excluded a lot of aspects
+    if (this.state.excluded.length >= 6)
+      if (!window.confirm("You've excluded a lot of aspects. I haven't implemented failsafes for that so if you continue, the webpage may freeze if there is literally no way to build towards the goal. Just a warnin'."))
+        return;
+
     console.log(data.chosenAspects)
 
     var bestBuilds = []; // todo
