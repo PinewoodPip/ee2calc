@@ -82,7 +82,6 @@ for (var x in aspects) {
       num++;
 
       extraAspects[num] = newAspect;
-      console.log(newAspect)
     }
   }
 }
@@ -104,6 +103,42 @@ for (var x in aspects) {
   // total embodiment req
   for (var z in aspect.requirements) {
     aspect.totalRequirements += aspect.requirements[z];
+  }
+}
+
+class Checkbox extends React.Component {
+  toggle(data, e) {
+    if (this.props.app.state.selection.includes(this.props.data)) {
+      this.props.app.updateSelection(this.props.data, null)
+
+      if (!this.props.data.isCoreNode && this.props.data.tier != 3)
+        this.props.app.updateExclusion(this.props.data, null)
+    }
+    else if (this.props.app.state.excluded.includes(this.props.data)) {
+      this.props.app.updateExclusion(this.props.data, null)
+    }
+    else {
+      this.props.app.updateSelection(this.props.data, null);
+    }
+  }
+  render() {
+    var state = "checkbox ";
+    var text = ""
+
+    if (this.props.app.state.selection.includes(this.props.data)) {
+      state += "chk-green"
+      text = "✓"
+    }
+    else if (this.props.app.state.excluded.includes(this.props.data)) {
+      state += "chk-red"
+      text = "✕"
+    }
+
+    return (
+      <div className={"unselectable " + state} onClick={() => this.toggle()}>
+        <p>{text}</p>
+      </div>
+    )
   }
 }
 
@@ -168,8 +203,8 @@ class Aspect extends React.Component {
   render() {
     return (
       <Tippy content={this.getTooltip()} placement="bottom" duration="0">
-        <div className="aspect">
-          <input type="checkbox" onChange={(e) => this.props.clickCallback(this.props.data, e)}></input>
+        <div className="aspect unselectable">
+          <Checkbox data={this.props.data} app={this.props.app}></Checkbox>
           <p>{this.props.data.name}</p>
           <div className="embodiments-box">
             {this.getRequirementsText()}
@@ -186,6 +221,7 @@ class App extends React.Component {
 
     this.state = {
       selection: [],
+      excluded: [], // excluded aspects
       result: null,
       waiting: false,
       useFullCore: false,
@@ -201,6 +237,11 @@ class App extends React.Component {
 
     // if player chose tier 2s, replace those with generated versions. later we will discard the duplicates once one of the variants has been chosen
     var realList = [];
+    var excludedAspects = [];
+    for (var n = 0; n < this.state.excluded.length; n++) {
+      excludedAspects.push(this.state.excluded[n].id)
+    }
+    
     for (var x = 0; x < list.length; x++) { // this works
       var aspect = list[x];
 
@@ -232,6 +273,9 @@ class App extends React.Component {
     function hasRelevantReward(aspect, reqs) {
       for (var x in aspect.rewards) {
         var reward = aspect.rewards[x];
+
+        if (excludedAspects.includes(aspect.id)) // excluded aspects
+          return false;
 
         if (aspect.dipping && !this.state.considerDipping)
           return false;
@@ -467,7 +511,6 @@ class App extends React.Component {
 
   // add/remove aspects to the list of aspects we want to calculate, called by the checkboxes
   updateSelection(aspect, e) {
-    const checked = e.target.checked;
     var selection = this.state.selection.slice();
 
     if (!selection.includes(aspect))
@@ -477,6 +520,19 @@ class App extends React.Component {
 
     this.setState({
       selection: selection
+    })
+  }
+
+  updateExclusion(aspect, e) {
+    var selection = this.state.excluded.slice();
+
+    if (!selection.includes(aspect))
+      selection.push(aspect);
+    else
+      selection = selection.filter(function(val, index, arr){ return val != aspect })
+
+    this.setState({
+      excluded: selection
     })
   }
 
@@ -527,6 +583,7 @@ class App extends React.Component {
       data={aspect}
       key={x}
       clickCallback={this.updateSelection.bind(this)}
+      app={this}
       />
 
       var hr = <hr key={x + "_hr"}></hr>;
@@ -778,3 +835,5 @@ function aspectAlreadyPicked(build, aspect) {
 }
 
 export default App;
+
+// serity pls come back, we miss you :(

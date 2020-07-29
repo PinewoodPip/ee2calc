@@ -75,6 +75,38 @@ input[type="checkbox"] {
   margin: 5px;
 }
 
+.checkbox {
+  border: 1px #4b4b4b solid;
+  width: 25px;
+  height: 25px;
+  margin: 5px;
+  border-radius: 3px;
+}
+
+.checkbox p {
+  line-height: 25px;
+  margin: 0;
+  text-align: center;
+  font-size: 120%;
+}
+
+.chk-green {
+  background-color: lightgreen;
+}
+
+.chk-red {
+  background-color: #f74949;
+}
+
+.unselectable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 .tooltip {
   text-align: center;
   line-height: 5px;
