@@ -227,7 +227,7 @@ class App extends React.Component {
       useFullCore: false,
       considerDipping: false,
       selfSustain: true,
-      pointsBudget: 25,
+      pointsBudget: 26,
       preference: "0", // scoring mode
       iterations: 5000, // how many random builds are generated and compared
     }
