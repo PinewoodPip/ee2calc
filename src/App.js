@@ -259,6 +259,11 @@ class App extends React.Component {
       }
     }
 
+    // add the full core to the list of user chosen aspects if we're using it
+    if (this.state.useFullCore) {
+      realList.push(aspects.core_full);
+    }
+
     list = realList;
 
     var newList = {}
