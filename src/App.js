@@ -560,9 +560,9 @@ class App extends React.Component {
       }
       else {
         if (this.state.result.points != this.state.result.finalCost)
-        resultText += "Shortest path found ({0} points to reach, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
+        resultText += "Shortest path found ({0} points to complete, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
         else
-        resultText += "Shortest path found ({0} points to reach): ".format(this.state.result.points);
+        resultText += "Shortest path found ({0} points to complete): ".format(this.state.result.points);
 
         for (var x in this.state.result.aspects) {
           resultText += this.state.result.aspects[x].name
