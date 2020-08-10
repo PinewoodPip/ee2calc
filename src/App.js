@@ -4,6 +4,14 @@ import _ from "lodash"
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import { aspects } from "./Data.js" // ascension data goes there
+import { result } from 'underscore';
+
+// revise scoring for both modes
+
+// something important to consider: going to grab the 2nd node of a tier 2, then backtracking to remove something
+// pointsNeeded calc doesnt work properly rn
+
+// maybe start building from the goal and pick aspects for embs, then go from start and try to make a real path out of that?
 
 const strings = {
   iterations: "How many builds should be randomly generated. With higher amounts the search takes longer but is more likely to find the most efficient build. Keep this in the thousands, and increase it when you're doing crazy searches (4+ aspects chosen).",
@@ -350,7 +358,7 @@ class App extends React.Component {
     for (var b = 0; b < list.length; b++) {
       var asp = list[b]
       if ((asp.generated != undefined && reqs[asp.extraEmbodimentType] == 0) || asp.dipping != undefined) {
-        console.log("unneeded " + asp.name)
+        //console.log("unneeded " + asp.name)
       }
       else
         chosenAspects[b] = list[b];
@@ -378,7 +386,7 @@ class App extends React.Component {
       if (!window.confirm("You've excluded a lot of aspects. I haven't implemented failsafes for that so if you continue, the webpage may freeze if there is literally no way to build towards the goal. Just a warnin'."))
         return;
 
-    console.log(data.chosenAspects)
+    //console.log(data.chosenAspects)
 
     var bestBuilds = []; // todo
     var bestBuild;
@@ -422,7 +430,7 @@ class App extends React.Component {
 
             skipRandomChoice = true;
 
-            console.log("picked " + chosenAspect.name + " (goal) because reqs were fulfilled")
+            //console.log("picked " + chosenAspect.name + " (goal) because reqs were fulfilled")
 
             // if one of the goals was a t2, remove the variants of it from the list of goals
             if (chosenAspect.tier == 2) {
@@ -431,7 +439,7 @@ class App extends React.Component {
               for (var z in chosenAspects) {
                 var asp = chosenAspects[z];
                 if (asp.id == chosenAspect.id && asp != chosenAspect) {
-                  console.log("removed " + asp.name)
+                  //console.log("removed " + asp.name)
                 }
                 else {
                   newGoals.push(asp);
@@ -452,7 +460,7 @@ class App extends React.Component {
           if (fullfillsRequirements(build, {aspect}) && !aspectAlreadyPicked(build, aspect)) {
             build.push(aspect)
 
-            console.log("picked " + aspect.name)
+            //console.log("picked " + aspect.name)
           }
         }
 
@@ -472,13 +480,29 @@ class App extends React.Component {
         var aspectsToRemove = [];
         var filteredBuild = build;
         if (allChosenNodesObtained && this.state.selfSustain) {
-          for (var x = 0; x < build.length; x++) {
-            var asp = build[x];
-            var buildWithoutThat = filteredBuild.filter(function(val) {return val != asp });
+          // for (var x = 0; x < build.length; x++) {
+          //   var asp = build[x];
+          //   var buildWithoutThat = filteredBuild.filter(function(val) {return val != asp });
 
-            if (fullfillsRequirements(buildWithoutThat) && !isInObject(asp, data.chosenAspects) && filteredBuild.includes(asp)) {
-              aspectsToRemove.push(asp);
-              filteredBuild = filteredBuild.filter(function(val) {return val != asp });
+          //   if (fullfillsRequirements(buildWithoutThat) && !isInObject(asp, data.chosenAspects) && filteredBuild.includes(asp)) {
+          //     aspectsToRemove.push(asp);
+          //     filteredBuild = filteredBuild.filter(function(val) {return val != asp });
+          //   }
+          // }
+
+          for (var x = build.length; x >= 0; x--) {
+            var asp = build[x];
+            var earliestTimeToRemove = null;
+            if (!isInObject(asp, data.chosenAspects)) { // are we checking the right thing here?
+              var buildWithoutThat = filteredBuild.filter(function(val) {return val != asp });
+              for (var z = build.length; z >= 0; z--) {
+                if (fullfillsRequirements(buildWithoutThat) && filteredBuild.includes(asp)) {
+                  aspectsToRemove.push({
+                    aspect: asp,
+                    time: z});
+                  filteredBuild = filteredBuild.filter(function(val) {return val != asp });
+                }
+              }
             }
           }
         }
@@ -488,15 +512,18 @@ class App extends React.Component {
           break;
       }
 
-      // < ! > Sometimes a build comes up with 0 aspects and points. I assume this happens when the find-aspects loop has finished and somehow, miraculously, all ~2000 attempts to find a starting point for the build have failed.
+      // < ! > Sometimes a build comes up with 0 aspects and points. I assume this happens when the find-aspects loop has finished and somehow, miraculously, all attempts to find a starting point for the build have failed.
       if (build.length != 0) {
         console.log(build);
-        var pointsToReach = getTotalPoints(build);
+        var pathOperationOrder = GetPathOperationOrder(build, aspectsToRemove)
+        //var pointsToReach = GetMinimumPoints(pathOperationOrder);
+        var pointsToReach = getTotalPoints(build)
         var pointsToSustain = getTotalPoints(filteredBuild)
 
         var buildInfo = {
           aspects: build,
           aspectsToRemove: aspectsToRemove,
+          pathOperationOrder: pathOperationOrder,
           points: pointsToReach,
           finalCost: pointsToSustain,
           score: pointsToReach + pointsToSustain + ((this.state.preference == "0") ? 0 : build.length), // less aspects = better, discourages needlessly picking builds only to despec them later
@@ -564,24 +591,39 @@ class App extends React.Component {
         console.log(this.state.result)
       }
       else {
+        var order = this.state.result.pathOperationOrder;
         if (this.state.result.points != this.state.result.finalCost)
-        resultText += "Shortest path found ({0} points to complete, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
+          resultText += "Shortest path found ({0} points needed, {1} points after self-sustaining): ".format(this.state.result.points, this.state.result.finalCost);
         else
-        resultText += "Shortest path found ({0} points to complete): ".format(this.state.result.points);
+          resultText += "Shortest path found ({0} points needed): ".format(this.state.result.points);
 
-        for (var x in this.state.result.aspects) {
-          resultText += this.state.result.aspects[x].name
+        for (var x in order) {
+          var item = order[x];
 
-          if (x != this.state.result.aspects.length - 1 || !this.state.result.aspectsToRemove.length == 0)
-            resultText += " -> "
+          if (item.operation == "add") {
+            resultText += item.aspect.name;
+          }
+          else if (item.operation == "remove") {
+            resultText += " ❌ " + item.aspect.name;
+          }
+
+          if (x != order.length-1)
+           resultText += " -> "
         }
 
-        for (var z in this.state.result.aspectsToRemove) {
-          resultText += " ❌ " + this.state.result.aspectsToRemove[z].name
+        // for (var x in this.state.result.aspects) {
+        //   resultText += this.state.result.aspects[x].name
 
-          if (z != this.state.result.aspectsToRemove.length - 1)
-            resultText += " -> "
-        }
+        //   if (x != this.state.result.aspects.length - 1 || !this.state.result.aspectsToRemove.length == 0)
+        //     resultText += " -> "
+        // }
+
+        // for (var z in this.state.result.aspectsToRemove) {
+        //   resultText += " ❌ " + this.state.result.aspectsToRemove[z].name
+
+        //   if (z != this.state.result.aspectsToRemove.length - 1)
+        //     resultText += " -> "
+        // }
       }
     }
 
@@ -752,6 +794,33 @@ function getTotalPoints(build) {
   }
 
   return points;
+}
+
+function GetMinimumPoints(path) {
+  var points = 0;
+
+  for (var x = 0; x < path.length; x++) {
+    var asp = path[x].aspect;
+    points += (path[x].operation == "add") ? asp.nodes : -asp.nodes;
+
+  }
+
+  return points;
+}
+
+function GetPathOperationOrder(build, toRemove) {
+  var path = [];
+
+  for (var x = 0; x < build.length; x++) {
+    var asp = build[x];
+    path.push({aspect: asp, operation: "add"})
+  }
+
+  for (var z in toRemove) {
+    path.splice(toRemove[z].time, 0, {aspect: toRemove[z].aspect, operation: "remove"})
+  }
+  console.log(path);
+  return path;
 }
 
 function mergeIntoObject(build, aspect) {
