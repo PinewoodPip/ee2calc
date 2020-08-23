@@ -6,6 +6,30 @@
   width: 95%;
   height: 595px;
   margin: 25px;
+  margin-bottom: 5px;
+  margin-top: 5px;
+}
+
+.dark-bg {
+  background-color: rgb(54, 57, 63);
+}
+
+.dark-mode-text {
+  color: aliceblue
+}
+
+.dark-mode-embodiment {
+  filter: brightness(170%)
+}
+
+.dark-mode-checkbox {
+  border-color: aliceblue !important;
+}
+
+.flexbox-horizontal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .num-input {
@@ -18,10 +42,6 @@
 .num-input input {
   height: 20px;
   width: 40px;
-}
-
-button {
-  margin: 8px;
 }
 
 .source-code-link {
@@ -43,7 +63,8 @@ button {
 
 hr {
   width: 90%;
-  margin: 7px
+  margin: 7px;
+  border-color: grey;
 }
 
 .bottom-interface {
@@ -54,10 +75,10 @@ hr {
   flex-direction: row;
 }
 
-.bottom-interface.column p {
+/* .bottom-interface.column p {
   margin-left: 130px;
   margin-right: 130px;
-}
+} */
 
 .column {
   flex-direction: column;
@@ -67,6 +88,14 @@ button {
   height: 50px;
   padding-left: 15px;
   padding-right: 15px;
+  margin: 8px;
+}
+
+.arrow-button {
+  height: 30px;
+  width: 30px;
+  padding: 10px;
+  line-height: 7px;
 }
 
 input[type="checkbox"] {
@@ -179,6 +208,24 @@ input[type="checkbox"] {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.result-arrow {
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.result-goal {
+  color: rgb(25, 179, 25);
+  font-weight: bold;
+}
+
+.result-key {
+  font-weight: bold;
+}
+
+.result-removable {
+  color: grey;
 }
 
 .App {
