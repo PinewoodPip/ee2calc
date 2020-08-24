@@ -75,11 +75,6 @@ hr {
   flex-direction: row;
 }
 
-/* .bottom-interface.column p {
-  margin-left: 130px;
-  margin-right: 130px;
-} */
-
 .column {
   flex-direction: column;
 }
@@ -215,6 +210,12 @@ input[type="checkbox"] {
   margin-right: 5px;
 }
 
+.result-arrow-dark-mode {
+  margin-left: 5px;
+  margin-right: 5px;
+  color: rgb(160, 160, 160);
+}
+
 .result-goal {
   color: rgb(25, 179, 25);
   font-weight: bold;
@@ -228,41 +229,22 @@ input[type="checkbox"] {
   color: grey;
 }
 
+.result-goal-dark-mode {
+  color: rgb(110, 235, 110);
+  font-weight: bold;
+  /* -webkit-text-stroke: 0.5px rgb(167, 167, 167); */
+}
+
+.result-key-dark-mode {
+  color: white;
+  font-weight: bold;
+}
+
+.result-removable-dark-mode {
+  color: rgb(187, 187, 187);
+  font-weight: bold;
+}
+
 .App {
   text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }

@@ -1010,20 +1010,6 @@ class App extends React.Component {
         key++;
       }
 
-      // for (let x in reqs) {
-      //   reqsText += "{0} {1}, ".format(reqs[x], x)
-      // }
-      // for (let x in rewards) {
-      //   rewardsText += "{0} {1}, ".format(rewards[x], x)
-      // }
-      // reqsText = reqsText.slice(0, reqsText.length-2)
-      // rewardsText = rewardsText.slice(0, rewardsText.length-2)
-
-      // let realRewardsText = ""
-      // if (rewardsText.length != 0)
-      //   realRewardsText = "(rewards: {0})".format(rewardsText)
-
-      // requirementsInfo = <p className={textClass}>{"Requirements of chosen aspects: {0} {1}".format(reqsText, realRewardsText)}</p>
       requirementsInfo = <div className="flexbox-horizontal">
         <p className={textClass}>{"Requirements of chosen aspects: "}</p>
         {reqEmbs}
@@ -1043,6 +1029,7 @@ class App extends React.Component {
       </div>
 
       var path = this.state.result.bestPaths[this.state.resultIndex];
+      let darkModeClass = this.state.darkMode ? "-dark-mode" : ""
 
       for (let x in path) {
         console.log(x)
@@ -1050,25 +1037,25 @@ class App extends React.Component {
 
         switch(element.role) {
           case "goal": {
-            text.push(<p className="result-goal" key={x}>{element.aspect.name}</p>)
+            text.push(<p className={"result-goal" + darkModeClass} key={x}>{element.aspect.name}</p>)
             break;
           }
           case "removable": {
-            text.push(<p className="result-removable" key={x}>{element.aspect.name}</p>)
+            text.push(<p className={"result-removable" + darkModeClass} key={x}>{element.aspect.name}</p>)
             break;
           }
           case "remove": {
-            text.push(<p className="result-removable" key={x}>{"❌ " + element.aspect.name}</p>)
+            text.push(<p className={"result-removable" + darkModeClass} key={x}>{"❌ " + element.aspect.name}</p>)
             break;
           }
           case "key": {
-            text.push(<p className="result-key" key={x}>{element.aspect.name}</p>)
+            text.push(<p className={"result-key" + darkModeClass} key={x}>{element.aspect.name}</p>)
             break;
           }
         }
 
         if (x != path.length - 1)
-          text.push(<p className="result-arrow" key={-x-1}>{" -> "}</p>)
+          text.push(<p className={"result-arrow" + darkModeClass} key={-x-1}>{" -> "}</p>)
       }
     }
     else
