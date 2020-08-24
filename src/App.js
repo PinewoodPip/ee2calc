@@ -992,10 +992,17 @@ class App extends React.Component {
         }
     }
 
+    // display requirements and rewards of chosen aspects
     var requirementsInfo = null;
-    if (this.state.selection.length > 0) {
-      let reqs = getTotalReqs(this.state.selection, true)
-      let rewards = getTotalRewards(this.state.selection, true, true)
+    if (this.state.selection.length > 0 || this.state.useFullCore) {
+      // consider the core. it's not usually in selection and is instead added during filtering
+      let selection = this.state.selection.slice();
+      if (this.state.useFullCore) {
+        selection.push(aspects.core_full)
+      }
+
+      let reqs = getTotalReqs(selection, true)
+      let rewards = getTotalRewards(selection, true, true)
 
       let reqEmbs = []
       let rewEmbs = []

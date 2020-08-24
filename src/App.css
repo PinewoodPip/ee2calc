@@ -45,10 +45,11 @@
 }
 
 .source-code-link {
-  text-align: center;
+  text-align: left;
+  left: 20px;
   position: absolute;
   bottom: 20px;
-  width: 100%;
+  width: 200px;
 }
 
 .dropdown {
