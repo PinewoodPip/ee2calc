@@ -454,19 +454,6 @@ class App extends React.Component {
 
     var validBuilds = []; // valid self-sustainable builds
 
-    // function getRelevantRewards(build) {
-    //   let reqs = getTotalReqs(build);
-
-    //   for (let x in build) {
-    //     let asp = build[x]
-    //     for (let z in asp.rewards) {
-    //       reqs[z] -= asp.rewards[z];
-    //     }
-    //   }
-
-    //   return reqs;
-    // }
-
     function getRemainingReqs(build, deleteUnused=false) {
       let reqs = getTotalReqs(build);
 
@@ -614,14 +601,12 @@ class App extends React.Component {
           }
         }
 
+        // check if we got everything
         if (keys === keyAspects.length) {
-          // console.log("Path:")
-          // console.log(build);
           break;
         }
         else {
           let asp = _.sample(aspects);
-          console.log(getRemainingReqs(keyAspects, true))
           let relevantEmbodiments = getRemainingReqs(keyAspects, true);
           // let relevantEmbodiments = getRemainingReqs(build); // this was a problem, we're checking the reqs of what we're building...
 
@@ -678,6 +663,39 @@ class App extends React.Component {
         bestPaths.push(path);
       }
     }
+
+    var pathIds = []
+    var duplicates = []
+
+    // filter out duplicates
+    for (let x in bestPaths) {
+      let pathId = []
+
+      for (let z in bestPaths[x]) {
+        let asp = bestPaths[x][z].aspect;
+        pathId.push(asp.id)
+      }
+
+      pathId.sort();
+
+      if (pathIds.length == 0)
+        pathIds.push(pathId)
+      else {
+        for (let z in pathIds) {
+          if (pathIds[z] == pathId) {
+            pathIds.push(pathId)
+          }
+          else {
+            duplicates.push(bestPaths[x])
+          }
+        }
+      }
+    
+    }
+
+    bestPaths = bestPaths.filter(function(item){
+      return !duplicates.includes(item);
+    })
 
     console.log("Paths:")
     console.log(bestPaths)
@@ -978,8 +996,6 @@ class App extends React.Component {
     if (this.state.selection.length > 0) {
       let reqs = getTotalReqs(this.state.selection, true)
       let rewards = getTotalRewards(this.state.selection, true, true)
-      let reqsText = ""
-      let rewardsText = ("")
 
       let reqEmbs = []
       let rewEmbs = []
@@ -1032,7 +1048,6 @@ class App extends React.Component {
       let darkModeClass = this.state.darkMode ? "-dark-mode" : ""
 
       for (let x in path) {
-        console.log(x)
         let element = path[x];
 
         switch(element.role) {
