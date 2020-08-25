@@ -131,7 +131,7 @@ for (var x in aspects) {
 }
 
 class Checkbox extends React.Component {
-  toggle(data, e) {
+  toggle() {
     if (this.props.app.state.selection.includes(this.props.data)) {
       this.props.app.updateSelection(this.props.data, null)
 
@@ -145,11 +145,19 @@ class Checkbox extends React.Component {
       this.props.app.updateSelection(this.props.data, null);
     }
   }
+
   render() {
     var state = "checkbox ";
     var text = ""
 
-    if (this.props.app.state.selection.includes(this.props.data)) {
+    // disable onClick if this is a core node and we're using full core
+    let onClick = (this.props.data.isCoreNode != undefined && this.props.app.state.useFullCore) ? null : () => this.toggle()
+
+    if (this.props.data.isCoreNode != undefined && this.props.app.state.useFullCore) {
+      state += "chk-grey"
+      text = "✓"
+    }
+    else if (this.props.app.state.selection.includes(this.props.data)) {
       state += "chk-green"
       text = "✓"
     }
@@ -159,7 +167,7 @@ class Checkbox extends React.Component {
     }
 
     return (
-      <div className={"unselectable " + state + " " + (this.props.darkMode ? "dark-mode-checkbox" : "")} onClick={() => this.toggle()}>
+      <div className={"unselectable " + state + " " + (this.props.darkMode ? "dark-mode-checkbox" : "")} onClick={onClick}>
         <p>{text}</p>
       </div>
     )
@@ -299,7 +307,11 @@ class App extends React.Component {
     for (var x = 0; x < list.length; x++) { // this works
       var aspect = list[x];
 
-      realList.push(aspect); // we dont split t2s up here now
+      if (aspect.isCoreNode != undefined && this.state.useFullCore) {
+
+      }
+      else
+        realList.push(aspect); // we dont split t2s up here now
       // if (aspect.tier == 2) {
       //   for (var z in aspects) {
       //     var asp = aspects[z];
