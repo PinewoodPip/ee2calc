@@ -297,7 +297,6 @@ class App extends React.Component {
 
   filterApplicableAspects(list) { // list is chosen aspects
 
-    // if player chose tier 2s, replace those with generated versions. later we will discard the duplicates once one of the variants has been chosen
     var realList = [];
     var excludedAspects = [];
     for (var n = 0; n < this.state.excluded.length; n++) {
@@ -307,11 +306,12 @@ class App extends React.Component {
     for (var x = 0; x < list.length; x++) { // this works
       var aspect = list[x];
 
+      // exclude individual core nodes if we're using full core
       if (aspect.isCoreNode != undefined && this.state.useFullCore) {
 
       }
       else
-        realList.push(aspect); // we dont split t2s up here now
+        realList.push(aspect); // we dont split t2s up here anymore
       // if (aspect.tier == 2) {
       //   for (var z in aspects) {
       //     var asp = aspects[z];
@@ -1011,13 +1011,16 @@ class App extends React.Component {
       let selection = this.state.selection.slice();
       if (this.state.useFullCore) {
         selection.push(aspects.core_full)
+        selection = selection.filter(function(item) {return item.isCoreNode == undefined})
       }
 
       let reqs = getTotalReqs(selection, true)
       let rewards = getTotalRewards(selection, true, true)
+      let nodes = getTotalPoints(selection)
 
       let reqEmbs = []
       let rewEmbs = []
+      let pointsText = <p className={textClass} style={{marginLeft: "0px"}}>{", nodes: {0}".format(nodes)}</p>
       var key = 0;
 
       for (let x in reqs) {
@@ -1028,6 +1031,9 @@ class App extends React.Component {
           darkMode={this.state.darkMode}
         />)
         key++;
+      }
+      if (reqEmbs.length == 0) {
+        reqEmbs.push(<p className={textClass} style={{marginLeft: "5px"}}>none</p>)
       }
 
       for (let x in rewards) {
@@ -1044,12 +1050,16 @@ class App extends React.Component {
         }
         key++;
       }
+      if (rewEmbs.length == 0) {
+        rewEmbs.push(<p className={textClass} style={{marginLeft: "5px"}}>none.</p>)
+      }
 
       requirementsInfo = <div className="flexbox-horizontal">
         <p className={textClass}>{"Requirements of chosen aspects: "}</p>
         {reqEmbs}
         <p className={textClass}>{", rewards:"}</p>
         {rewEmbs}
+        {pointsText}
       </div>
     }
 
