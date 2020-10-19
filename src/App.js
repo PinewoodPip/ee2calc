@@ -182,9 +182,8 @@ class App extends React.Component {
       useFullCore: false,
       considerDipping: false, // consider dipping t2s. currently disabled
       selfSustain: true,
-      pointsBudget: 26, // no longer used
       preference: "0", // scoring mode
-      iterations: 3000, // how many random builds are generated and compared
+      iterations: 4000, // how many random builds are generated and compared
       maximumOutputs: 10, // maximum path results shown
       resultIndex: 0, // currently displayed result index
       darkMode: false,
@@ -950,7 +949,7 @@ class App extends React.Component {
     if (!selection.includes(aspect))
       selection.push(aspect);
     else
-      selection = selection.filter(function(val, index, arr){ return val != aspect })
+      selection = selection.filter(function(val){ return val != aspect })
 
     this.setState({
       selection: selection
@@ -963,7 +962,7 @@ class App extends React.Component {
     if (!selection.includes(aspect))
       selection.push(aspect);
     else
-      selection = selection.filter(function(val, index, arr){ return val != aspect })
+      selection = selection.filter(function(val){ return val != aspect })
 
     this.setState({
       excluded: selection
@@ -1275,35 +1274,8 @@ class App extends React.Component {
 
 // --------- HELPER FUNCTIONS ------------
 
-function shuffle(array) { // https://stackoverflow.com/a/2450976
-  var currentIndex = array.length, temporaryValue, randomIndex;
-
-  // While there remain elements to shuffle...
-  while (0 !== currentIndex) {
-
-    // Pick a remaining element...
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex -= 1;
-
-    // And swap it with the current element.
-    temporaryValue = array[currentIndex];
-    array[currentIndex] = array[randomIndex];
-    array[randomIndex] = temporaryValue;
-  }
-
-  return array;
-}
-
 function capitalizeFirstLetter(string) { // https://stackoverflow.com/a/1026087
   return string.charAt(0).toUpperCase() + string.slice(1);
-}
-
-function isInObject(thing, obj) {
-  for (var x in obj) {
-    if (obj[x] == thing)
-      return true
-  }
-  return false;
 }
 
 function getTotalPoints(build) {
@@ -1314,36 +1286,6 @@ function getTotalPoints(build) {
 
   return points;
 }
-
-function GetPathOperationOrder(build, toRemove) {
-  var path = [];
-
-  for (var x = 0; x < build.length; x++) {
-    var asp = build[x];
-    path.push({aspect: asp, operation: "add"})
-  }
-
-  for (var z in toRemove) {
-    path.splice(toRemove[z].time, 0, {aspect: toRemove[z].aspect, operation: "remove"})
-  }
-  console.log(path);
-  return path;
-}
-
-function mergeIntoObject(build, aspect) {
-  var newList = {};
-  for (var x = 0; x < build.length; x++) {
-    newList[x] = build[x];
-  }
-  newList[aspect.id] = aspect;
-
-  return newList;
-}
-
-function randomProp(obj) {
-  var keys = Object.keys(obj);
-  return obj[keys[ keys.length * Math.random() << 0]];
-};
 
 // https://stackoverflow.com/questions/6229197/how-to-know-if-two-arrays-have-the-same-values/34566587
 // yeah I really was too lazy to write this myself
@@ -1495,27 +1437,13 @@ function fullfillsRequirements(build, aspect=null) {
     var embodiments = getTotalRewards(build);
     var reqs = getTotalReqs(build, false, true);
 
-    // console.log("------")
-    // console.log(embodiments)
-    // console.log(reqs)
-
     for (let e in reqs) {
       if (embodiments[e] < reqs[e])
         return false;
     }
 
-    // console.log("yep")
     return true;
   }
-}
-
-function aspectAlreadyPicked(build, aspect) {
-  for (var x = 0; x < build.length; x++) {
-    if (build[x].id == aspect.id)
-      return true;
-  }
-
-  return false;
 }
 
 function getRelevantEmbs(build, goalBuild) {
