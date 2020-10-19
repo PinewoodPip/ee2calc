@@ -4,27 +4,10 @@ import _ from "lodash"
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import { aspects } from "./Data.js" // ascension data goes there
-import { result } from 'underscore';
 
-// todo:
-
-// add hoverable tooltips over each step of results display
-// remove self-sustain setting - DONE
-// revise scoring
-// t2s bug out in result display - NOT FIXED???, HAPPENS IN REMOVABLE ASPS ONLY
-// add dipping t2s, FOR THIS MAKE A HELPER FUNC FOR GENERATING T2S
-// revise scoring for both modes !!!, still seems inconsistent, sometimes result bugs out hard, revise path creation
-
-// something important to consider: going to grab the 2nd node of a tier 2, then backtracking to remove something
-// pointsNeeded calc doesnt work properly rn
-
-// maybe start building from the goal and pick aspects for embs, then go from start and try to make a real path out of that? - DONE
-
-// if lowest emb req is < number of t2s, use t2s for it and discard the emb's family, or cover it with core nodes? - SOMEWHAT DONE (not with core nodes)
-
-// after adding each new asp, make a new reqs list and only pull in relevant asps - DONE
-
-const generateTechnicalAspects = false;
+// Hey
+// Relevant code is in filterApplicableAspects(), calculateShortestPath() and calculateV2() for the self-fuelling.
+// Whole thing is a mess atm; took me quite a lot of tinkering to get things working and I haven't cleaned up the code since. My apologies.
 
 const strings = {
   iterations: "How many builds should be randomly generated. With higher amounts the search takes longer but is more likely to find the most efficient build. Keep this in the thousands, and increase it when you're doing crazy searches (3+ aspects chosen, multiple T3s, stuff like that).",
@@ -32,87 +15,13 @@ const strings = {
   selfSustain: "If enabled, shows aspects which can be removed after completing the chosen aspects.",
   preference: "Controls the scoring system for builds. The first option will make the search favor builds which require less points to sustain after removing all unnecessary aspects. The second option favors paths which require the least amount of points to reach, but may require more points to sustain.",
   considerDipping: "If enabled, the search will include the possibility of 'dipping' into a tier 2 aspects to get the embodiment reward on their second node, for only 2 points. This is rarely ever useful for finding shortest paths. If you're using this, you should increase the 'builds to try' setting considerably.",
+  mode: "'Find shortest paths' gives you paths towards your chosen aspects that require the least amount of points to complete. 'Self-sustain' mode instead gives you a list of other aspects you need to pick in order to self-sustain the ones you chose, using the least amount of Ascension Points possible."
 }
 
 String.prototype.format = function () { // by gpvos from stackoverflow
   var args = arguments;
   return this.replace(/\{(\d+)\}/g, function (m, n) { return args[n]; });
 };
-
-// generate a new "internal" aspect for each tier 2 aspect, one for each different embodiment rewards you can choose in node 2.
-var num = 999; // object key for these aspects, starts at high number to uhm... avoid any problems
-var extraAspects = {};
-
-if (generateTechnicalAspects) {
-  for (var x in aspects) {
-    var aspect = aspects[x];
-  
-    if (aspect.tier == 2) {
-      var embs = {
-        force: 1,
-        entropy: 1,
-        form: 1,
-        inertia: 1,
-        life: 1,
-      }
-  
-      for (var z in embs) {
-        var newAspect = {
-          name: aspect.name + " (+{0})".format(z),
-          id: aspect.id, // same id so the calc function doesnt pick multiple
-          family: "special",
-          tier: aspect.tier,
-          requirements: aspect.requirements, // does this reference or copy??
-          rewards: {},
-          nodes: aspect.nodes,
-          hasChoiceNode: aspect.hasChoiceNode,
-          generated: true, // if this property exists, aspect does not render in UI
-          extraEmbodimentType: z,
-        };
-  
-        for (var v in aspect.rewards) {
-          newAspect.rewards[v] = aspect.rewards[v];
-        }
-  
-        if (newAspect.rewards[z] == undefined)
-          newAspect.rewards[z] = 1;
-        else
-          newAspect.rewards[z] += embs[z]; // add +1 embodiment
-  
-        num++;
-  
-        extraAspects[num] = newAspect;
-      }
-  
-      // generate dipping aspects, which only have 2 nodes and grant 1 embodiment
-      for (var b in embs) {
-        var newAspect = {
-          name: aspect.name + " (dip, +{0})".format(b),
-          id: aspect.id, // same id so the calc function doesnt pick multiple
-          family: "special",
-          tier: aspect.tier,
-          requirements: aspect.requirements,
-          rewards: {},
-          nodes: 2, // dipping aspects only have 2 nodes
-          hasChoiceNode: aspect.hasChoiceNode,
-          dipping: true,
-          generated: true, // if this property exists, aspect does not render in UI
-          extraEmbodimentType: b,
-        };
-  
-        newAspect.rewards[b] = 1; // tier 2 dips reward 1 embodiment
-  
-        num++;
-  
-        extraAspects[num] = newAspect;
-      }
-    }
-  }
-}
-
-for (var x in extraAspects) { // gotta do this here because we cannot change an object while we're iterating through it
-  aspects[x] = extraAspects[x];
-}
 
 // calculate embodiments rewarded per Ascension point spent
 for (var x in aspects) {
@@ -130,18 +39,19 @@ for (var x in aspects) {
   }
 }
 
+// Checkbox element for choosing aspects that supports 3 states: unselected, selected and excluded
 class Checkbox extends React.Component {
   toggle() {
-    if (this.props.app.state.selection.includes(this.props.data)) {
+    if (this.props.app.state.selection.includes(this.props.data)) { // add or exclude if this is a t3 aspect or core node (cannot exclude those)
       this.props.app.updateSelection(this.props.data, null)
 
       if (!this.props.data.isCoreNode && this.props.data.tier != 3)
         this.props.app.updateExclusion(this.props.data, null)
     }
-    else if (this.props.app.state.excluded.includes(this.props.data)) {
+    else if (this.props.app.state.excluded.includes(this.props.data)) { // exclude
       this.props.app.updateExclusion(this.props.data, null)
     }
-    else {
+    else { // remove from selection
       this.props.app.updateSelection(this.props.data, null);
     }
   }
@@ -153,6 +63,7 @@ class Checkbox extends React.Component {
     // disable onClick if this is a core node and we're using full core
     let onClick = (this.props.data.isCoreNode != undefined && this.props.app.state.useFullCore) ? null : () => this.toggle()
 
+    // css classes and text
     if (this.props.data.isCoreNode != undefined && this.props.app.state.useFullCore) {
       state += "chk-grey"
       text = "✓"
@@ -174,6 +85,7 @@ class Checkbox extends React.Component {
   }
 }
 
+// embodiment icon component
 class Embodiment extends React.Component {
   render() {
     return (
@@ -184,14 +96,15 @@ class Embodiment extends React.Component {
   }
 }
 
+// component for displaying selectable aspects
 class Aspect extends React.Component {
-  getRequirementsText() {
+  getRequirementsText() { // create embodiment icons for the requirements
     var elements = [];
 
     for (var x in this.props.data.requirements) {
       var amount = this.props.data.requirements[x]
       var element;
-      var type = x; // serves to figure out css class
+      var type = x; // serves to figure out css class; each embodiment type has a different border color
       let darkMode = (this.props.darkMode)
 
       element = <Embodiment key={x} darkMode={darkMode} type={type} amount={amount}/>
@@ -201,7 +114,7 @@ class Aspect extends React.Component {
     return elements;
   }
 
-  getRewards() {
+  getRewards() { // get text for aspect rewards, used in the tooltip
     var text = [];
     var embs = {
       force: 0,
@@ -211,14 +124,14 @@ class Aspect extends React.Component {
       life: 0,
     }
 
-    for (var x in this.props.data.rewards) {
+    for (let x in this.props.data.rewards) {
       var amount = this.props.data.rewards[x]
       embs[x] = amount;
     }
 
-    // don't even show the header for tier 3 aspects
-    var header = (this.props.data.tier != 3) ? "Completion rewards:" : "";
-    for (var z in embs) {
+    // don't even show the header for tier 3 aspects, as they don't ever offer rewards
+    let header = (this.props.data.tier != 3) ? "Completion rewards:" : "";
+    for (let z in embs) {
       if (embs[z] != 0)
         text.push(<p key={this.props.data.name + "_tooltip_" + z}>{embs[z] + " " + capitalizeFirstLetter(z)}</p>);
     }
@@ -229,13 +142,13 @@ class Aspect extends React.Component {
     </div>;
   }
 
-  getTooltip() {
-    var name = this.props.data.name
-    var cost = this.props.data.nodes;
-    var rewards = this.getRewards();
-    var nodeText = ((this.props.data.nodes > 1) ? " ({0} nodes)" : " ({0} node)").format(cost)
+  getTooltip() { // gets the tooltip for this aspect
+    let name = this.props.data.name
+    let cost = this.props.data.nodes;
+    let rewards = this.getRewards();
+    let nodeText = ((this.props.data.nodes > 1) ? " ({0} nodes)" : " ({0} node)").format(cost)
     
-    // note to self, dont nest <p> elements accidentally
+    // note to self, dont nest <p> elements accidentally. bad stuff happens
     return (<div className="tooltip">
         <p className="tooltip">{name + nodeText}<br /></p>
         {rewards}
@@ -263,32 +176,34 @@ class App extends React.Component {
     super(props);
 
     this.state = {
-      selection: [],
+      selection: [], // chosen aspects
       excluded: [], // excluded aspects
-      result: null,
-      waiting: false,
+      result: null, // search outcome object
       useFullCore: false,
-      considerDipping: false,
+      considerDipping: false, // consider dipping t2s. currently disabled
       selfSustain: true,
-      pointsBudget: 26,
+      pointsBudget: 26, // no longer used
       preference: "0", // scoring mode
-      iterations: 30000, // how many random builds are generated and compared
-      maximumOutputs: 10,
-      resultIndex: 0,
+      iterations: 3000, // how many random builds are generated and compared
+      maximumOutputs: 10, // maximum path results shown
+      resultIndex: 0, // currently displayed result index
       darkMode: false,
+      mode: "fastest",
     }
 
+    // dark mode is saved between sessions
     if (window.localStorage.getItem("darkMode") == "true")
       this.state.darkMode = true;
   }
 
+  // switch between the different results
   changeIndex(change) {
     let current = this.state.resultIndex;
     current += change;
-    if (current > this.state.result.bestPaths.length-1)
+    if (current > this.state.result.bestBuilds.length-1)
       current = 0;
     else if (current < 0)
-      current = this.state.result.bestPaths.length-1;
+      current = this.state.result.bestBuilds.length-1;
 
     this.setState({
       resultIndex: current,
@@ -296,14 +211,22 @@ class App extends React.Component {
   }
 
   filterApplicableAspects(list) { // list is chosen aspects
+    /*
+      This method is called before starting a search.
+      Its purpose is to filter out aspects that we are 100% sure
+      will not be useful to the search,
+      or are excluded by the user.
+      An example of this would be aspects that ONLY grant form,
+      while we're searching for paths that do not require form.
+    */
 
-    var realList = [];
-    var excludedAspects = [];
+    var realList = []; // list of aspects that will be used in the search
+    var excludedAspects = []; // list of IDs of excluded aspects
     for (var n = 0; n < this.state.excluded.length; n++) {
       excludedAspects.push(this.state.excluded[n].id)
     }
     
-    for (var x = 0; x < list.length; x++) { // this works
+    for (var x = 0; x < list.length; x++) {
       var aspect = list[x];
 
       // exclude individual core nodes if we're using full core
@@ -311,7 +234,10 @@ class App extends React.Component {
 
       }
       else
-        realList.push(aspect); // we dont split t2s up here anymore
+        realList.push(aspect); 
+
+      // we dont split t2s up here anymore
+
       // if (aspect.tier == 2) {
       //   for (var z in aspects) {
       //     var asp = aspects[z];
@@ -342,13 +268,31 @@ class App extends React.Component {
       life: 0,
     }
 
+    // check what embodiment types we need
+    for (var z in list) {
+      var aspect = list[z];
+
+      reqs.force = (aspect.requirements.force > reqs.force) ? aspect.requirements.force : reqs.force;
+
+      reqs.entropy = (aspect.requirements.entropy > reqs.entropy) ? aspect.requirements.entropy : reqs.entropy;
+
+      reqs.form = (aspect.requirements.form > reqs.form) ? aspect.requirements.form : reqs.form;
+
+      reqs.inertia = (aspect.requirements.inertia > reqs.inertia) ? aspect.requirements.inertia : reqs.inertia;
+
+      reqs.life = (aspect.requirements.life > reqs.life) ? aspect.requirements.life : reqs.life;
+    }
+
+    // checks if an aspect has any relevant award compared against a list of requirements
     function hasRelevantReward(aspect, reqs) {
       for (var x in aspect.rewards) {
         var reward = aspect.rewards[x];
 
-        if (excludedAspects.includes(aspect.id)) // excluded aspects
+        // if it's excluded, it's not relevant
+        if (excludedAspects.includes(aspect.id))
           return false;
 
+        // more exclusions based on settings
         if (aspect.dipping && !this.state.considerDipping)
           return false;
 
@@ -356,7 +300,7 @@ class App extends React.Component {
         // if (aspect.tier == 2 && aspect.generated == undefined)
         //   return false;
 
-        // core handling. (do we need handling for the edge case where the calc chooses all 5 cores in non-core mode? probably. TODO)
+        // core handling
         if (aspect.id == "core_full" && !this.state.useFullCore)
           return false;
         else if (aspect.isCoreNode && this.state.useFullCore)
@@ -374,21 +318,6 @@ class App extends React.Component {
       return false;
     }
 
-    // check what embodiment types we need
-    for (var z in list) {
-      var aspect = list[z];
-
-      reqs.force = (aspect.requirements.force > reqs.force) ? aspect.requirements.force : reqs.force;
-
-      reqs.entropy = (aspect.requirements.entropy > reqs.entropy) ? aspect.requirements.entropy : reqs.entropy;
-
-      reqs.form = (aspect.requirements.form > reqs.form) ? aspect.requirements.form : reqs.form;
-
-      reqs.inertia = (aspect.requirements.inertia > reqs.inertia) ? aspect.requirements.inertia : reqs.inertia;
-
-      reqs.life = (aspect.requirements.life > reqs.life) ? aspect.requirements.life : reqs.life;
-    }
-
     for (var x in aspects) {
       var aspect = aspects[x];
 
@@ -399,7 +328,7 @@ class App extends React.Component {
     }
 
     // make sure the aspects we have chosen don't get filtered out.
-    // note to self: how the fuck does this avoid base t2s?
+    // this doesn't do shit right? TODO remove
     for (var y in list) {
       if (!newList.hasOwnProperty(list[y].id))
         newList[list[y].id] = list[y];
@@ -414,6 +343,7 @@ class App extends React.Component {
     }
 
     var chosenAspects = {}; // turn it into object and filter out irrelevant t2 variants
+    // no longer needed. TODO REMOVE
     for (var b = 0; b < list.length; b++) {
       var asp = list[b]
       if ((asp.generated != undefined && reqs[asp.extraEmbodimentType] == 0) || asp.dipping != undefined) {
@@ -427,7 +357,7 @@ class App extends React.Component {
       waiting: true,
     })
 
-    return { // this works
+    return {
       reqs: reqs,
       aspects: newList,
       chosenAspects: chosenAspects,
@@ -435,11 +365,331 @@ class App extends React.Component {
     };
   }
 
+  async calculateShortestPath() {
+    var data = this.filterApplicableAspects(this.state.selection);
+    data.chosenAspects = _.cloneDeep(data.chosenAspects)
+
+    // quit if nothing was selected
+    if (Object.keys(data.chosenAspects).length == 0)
+      return;
+
+    // warn if the user has excluded a lot of aspects
+    if (this.state.excluded.length >= 6)
+      if (!window.confirm("You've excluded a lot of aspects. I haven't implemented failsafes for that so if you continue, the webpage may freeze if there is literally no way to build towards the goal. Just a warnin'."))
+        return;
+
+    // is this needed? it's not even reshuffled every iteration
+    var chosenAspects = [] // we "shuffle" this.
+    var buildWithChosenAspects = [];
+    for (let x in data.chosenAspects) {
+      chosenAspects.push(data.chosenAspects[x]);
+      buildWithChosenAspects.push(data.chosenAspects[x])
+    }
+
+    var builds = []; // actually paths
+
+    for (let x = 0; x < this.state.iterations; x++) {
+      var build = [];
+      var maxPoints = 0;
+      var currentPoints = 0;
+      var path = [];
+      let keys = 0;
+      let chosenAspects = _.cloneDeep(buildWithChosenAspects);
+      let aspects = _.cloneDeep(data.aspects);
+      let partialT2s = [];
+
+      function changePoints(delta) {
+        currentPoints += delta;
+        if (currentPoints > maxPoints)
+          maxPoints = currentPoints;
+      }
+
+      function addPartialT2(asp, embBonus=null) {
+        let realAsp = _.cloneDeep(asp)
+        if (embBonus == null) {
+  
+        }
+        else {
+          realAsp.rewards = {}
+          realAsp.rewards[embBonus] = 1;
+          realAsp.name += " (partial, " + embBonus + ")"
+        }
+        realAsp.nodes = 2;
+        realAsp.fullAspect = asp;
+
+        partialT2s.push(realAsp)
+        build.push(realAsp);
+        path.push({
+          aspect: realAsp,
+          role: (isChosenNode(asp)) ? "goal" : "removable"
+        })
+        changePoints(realAsp.nodes);
+
+        // immediately check for stuff we can remove after reaching the emb node
+        checkForRemovals(true)
+      }
+
+      function isChosenNode(asp) {
+        for (let x in chosenAspects) {
+          if (chosenAspects[x].id == asp.id)
+            return true;
+        }
+        return false;
+      }
+
+      // check if removing an aspect would still keep requirements for goals in a build
+      function fullfillsGoalsIfRemoved(build, goals, asp) {
+        // this used to be just goals
+        let reqs = getTotalReqs(goals.concat(build), true)
+        let goalReqs = getTotalReqs(goals, true)
+        let newBuild = build.filter((x) => {return x != asp})
+        let rews = getTotalRewards(newBuild)
+
+        // filter out reqs that are not relevant to goals
+        for (let x in reqs) {
+          if (goalReqs[x] == undefined) {
+            delete reqs[x]
+          }
+        }
+
+        for (let x in reqs) {
+          if (rews[x] < reqs[x])
+            return false;
+        }
+        return true;
+      }
+
+      function checkForRemovals(removeT1s=true) {
+        // todo we should somehow prioritize removing asps that have more nodes
+        let newPath = path.slice()
+        newPath.reverse()
+        for (let x in newPath) {
+          if (newPath[x].role == "removable") {
+            let asp = newPath[x].aspect;
+
+            if (((asp.isCoreNode == undefined) || removeT1s) && (asp.tier != 2 || asp.fullAspect != undefined)) {
+              // if we're overflowing reqs, check if we can remove this aspect
+              let rews = getTotalRewards(build, false, true)
+              let reqs = getTotalReqs(chosenAspects, true)
+
+              let overflowed = false;
+
+              for (let z in reqs) { // iterate through reqs not rews, otherwise irrelevant embs get in the way
+                if (rews[z] > reqs[z]) {
+                  overflowed = true;
+                  break;
+                }
+              }
+
+              if (overflowed) {
+                // if this is a t2 thing, it needs special consideration due to them being split up
+                if (asp.tier == 2) {
+                  // merge partial and full
+                  let buildWithoutSplitT2 = build.filter((x) => {return x != asp && x.name != asp.fullAspect.name + " (complete)"})
+                  let realFullAspect = _.cloneDeep(asp.fullAspect)
+
+                  // add emb bonus
+                  for (let x in asp.rewards) {
+                    realFullAspect.rewards[x] += 1;
+                  }
+
+                  buildWithoutSplitT2.push(realFullAspect)
+
+                  if (fullfillsGoalsIfRemoved(buildWithoutSplitT2, chosenAspects, realFullAspect)) {
+                    // filter full
+                    let full;
+                    let ind;
+                    for (let x in path) {
+                      if (path[x].aspect.name == asp.fullAspect.name + " (complete)") {
+                        full = path[x].aspect;
+                        ind = x;
+                      }
+                    }
+                    path[ind].role = "removable-removed"
+                    path.push({
+                      aspect: full,
+                      role: "remove"
+                    })
+                    // does this work??
+                    build = build.filter((x) => {return x.name != full.name})
+                    changePoints(-asp.nodes)
+
+                    // filter partial
+                    path[newPath.length - 1 - x].role = "removable-removed"
+                    path.push({
+                      aspect: asp,
+                      role: "remove"
+                    })
+                    // does this work??
+                    build = build.filter((x) => {return x.name != asp.name})
+                    changePoints(-asp.nodes)
+
+                    console.log(build)
+                  }
+                }
+                else if (fullfillsGoalsIfRemoved(build, chosenAspects, asp)) {
+                  // change the role of this path element so we don't do this procedure on it again
+                  path[newPath.length - 1 - x].role = "removable-removed"
+                  path.push({
+                    aspect: asp,
+                    role: "remove"
+                  })
+                  // does this work??
+                  build = build.filter((x) => {return x.name != asp.name})
+                  changePoints(-asp.nodes)
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // choosing asps
+      for (let x = 0; x < 1000; x++) {
+        let ignoreStep = false;
+
+        // try to remove stuff
+        // check if we overflowed anything, then try to remove. also do this whenever we add a partial t2
+        checkForRemovals(false) // alright boys, ignoring T1s here finally fixed doppel bug
+
+        // check if we can complete a partial t2
+        let partialT2sToRemove = []
+        for (let z in partialT2s) {
+          let asp = _.cloneDeep(partialT2s[z].fullAspect)
+          let isChosen = isChosenNode(asp)
+          asp.nodes = asp.nodes - 2;
+          asp.name += " (complete)"
+
+          build.push(asp)
+          path.push({
+            aspect: asp,
+            role: isChosen ? "goal" : "removable"
+          })
+          changePoints(asp.nodes);
+
+          partialT2sToRemove.push(partialT2s[z])
+
+          // this is new
+          checkForRemovals(true)
+
+          if (isChosen)
+            keys++;
+        }
+        partialT2s = partialT2s.filter((x) => {return !partialT2sToRemove.includes(x)})
+
+        // check if we can pick the chosen asps now
+        for (let z in chosenAspects) {
+          let chosenAsp = chosenAspects[z];
+          if (fullfillsRequirements(build, [chosenAsp]) && !includesAspect(build, chosenAsp)) {
+            if (chosenAsp.tier == 2) {
+              let relevantEmbodiments = getTotalReqs(chosenAspects, true)
+              // console.log(relevantEmbodiments)
+              // port this back to v2?
+              // checkForRemovals()
+              addPartialT2(chosenAsp, _.sample(Object.keys(relevantEmbodiments)))
+              // checkForRemovals(true)
+            }
+            else {
+              build.push(chosenAsp)
+              path.push({
+                aspect: chosenAsp,
+                role: "goal",
+              });
+              changePoints(chosenAsp.nodes);
+              keys++;
+            }
+            ignoreStep = true;
+          }
+        }
+
+        // throw out garbo builds that never went anywhere
+        if (path.length > 25)
+          break;
+
+        if (!ignoreStep) {
+          // build complete
+          if (keys == chosenAspects.length) {
+            checkForRemovals(true)
+
+            let finalBuild = {
+              path: path,
+              build: build,
+              maxPoints: maxPoints,
+              points: currentPoints,
+            }
+            builds.push(finalBuild);
+            break;
+          }
+
+          // else pick randoms
+          let asp = _.sample(aspects);
+          // why didnt we have to del in the calcV2?
+          let remainingReqs = getRemainingReqs2(build, chosenAspects, true);
+          let relevantEmbodiments = getRelevantEmbs(build, chosenAspects)
+
+          if (hasRelevantRewards(asp, remainingReqs) && !includesAspect(build, asp) && fullfillsRequirements(build, [asp])) {
+            if (asp.tier == 2) {
+              let embBonus = _.sample(relevantEmbodiments)
+
+              // get the partial t2 first, then add a check for completing them outside this loop?
+              if (embBonus != undefined) {
+                addPartialT2(asp, embBonus)
+              }
+            }
+            else {
+              build.push(asp);
+
+              path.push({
+                aspect: asp,
+                role: "removable"
+              })
+              changePoints(asp.nodes);
+            }
+          }
+        }
+      }
+    }
+
+    var bestBuilds = [];
+    var bestPoints = null;
+    for (let x in builds) { // filter them down to the most point-efficient ones
+      // let build = builds[x].build
+      //let pointsNeeded = getTotalPoints(build)
+      let pointsNeeded = builds[x].maxPoints
+
+      if (bestBuilds.length == 0) {
+        bestBuilds.push(builds[x]);
+        bestPoints = pointsNeeded;
+      }
+      else if (pointsNeeded < bestPoints) {
+        bestBuilds = [builds[x]];
+        bestPoints = pointsNeeded;
+      }
+      else if (pointsNeeded == bestPoints && bestBuilds.length <= this.state.maximumOutputs) {
+        bestBuilds.push(builds[x]);
+      }
+    }
+
+    console.log(bestBuilds);
+    console.log(bestPoints)
+
+    if (bestBuilds.length == 0) {
+      console.log("No results found. Try again and/or increase the 'builds to try' setting.")
+    }
+    else {
+      this.setState({result: {
+        bestBuilds: filterDuplicatePaths(bestBuilds),
+        buildPoints: bestPoints,
+        pointsNeeded: bestPoints,
+      }})
+    }
+  }
+
   async calculateV2() {
     // step 1: make a list of relevant aspects and gather the total embodiment requirements
     var data = this.filterApplicableAspects(this.state.selection);
     data.chosenAspects = _.cloneDeep(data.chosenAspects)
-    console.log(data.chosenAspects);
+    
     // quit if nothing was selected
     if (Object.keys(data.chosenAspects).length == 0)
       return;
@@ -465,51 +715,6 @@ class App extends React.Component {
     }
 
     var validBuilds = []; // valid self-sustainable builds
-
-    function getRemainingReqs(build, deleteUnused=false) {
-      let reqs = getTotalReqs(build);
-
-      for (let x in build) {
-        let asp = build[x]
-        for (let z in asp.rewards) {
-          reqs[z] -= asp.rewards[z];
-        }
-      }
-
-      if (deleteUnused) {
-        for (let x in reqs) {
-          if (reqs[x] < 1) {
-            delete reqs[x]
-          }
-        }
-      }
-
-      return reqs;
-    }
-
-    function hasRelevantRewards(asp, reqs) {
-      for (let x in reqs) {
-        if (asp.rewards[x] != undefined) {
-          if (asp.rewards[x] > 0)
-            return true;
-        }
-      }
-      return false;
-    }
-
-    function includesAspect(build, asp) {
-      for (let x in build) {
-        if (build[x].id == asp.id)
-          return true;
-      }
-      return false;
-    }
-
-    var tier1s = []; // todo use these?
-    for (let x in data.aspects) {
-      if (data.aspects[x].tier == 1)
-        tier1s.push(data.aspects[x])
-    }
 
     console.log(data.aspects);
 
@@ -576,7 +781,7 @@ class App extends React.Component {
         bestPoints = pointsNeeded;
       }
       else if (pointsNeeded < bestPoints) {
-        bestBuilds = [build]; // CAREFUL! PREV WE WERE SETTING THIS TO []
+        bestBuilds = [build];
         bestPoints = pointsNeeded;
       }
       else if (pointsNeeded == bestPoints && bestBuilds.length <= this.state.maximumOutputs) {
@@ -590,7 +795,9 @@ class App extends React.Component {
     var bestPaths = [];
     var bestPathsPoints = null;
 
+    // this is where we actually make paths
     for (let x in bestBuilds) { // todo: revise if it rand picks the same way of calcV1, then filter the fastest paths
+      break; // haha sike not anymore
       let keyAspects = bestBuilds[x];
       let aspects = _.cloneDeep(data.aspects);
       let path = [];
@@ -676,222 +883,63 @@ class App extends React.Component {
       }
     }
 
-    var pathIds = []
-    var duplicates = []
+    bestPaths = filterDuplicatePaths(bestPaths)
+    bestBuilds = filterDuplicateBuilds(bestBuilds)
 
-    // filter out duplicates
-    for (let x in bestPaths) {
-      let pathId = []
+    // var pathIds = []
+    // var duplicates = []
 
-      for (let z in bestPaths[x]) {
-        let asp = bestPaths[x][z].aspect;
-        pathId.push(asp.id)
-      }
+    // // filter out duplicates
+    // for (let x in bestPaths) {
+    //   let pathId = []
 
-      pathId.sort();
+    //   for (let z in bestPaths[x]) {
+    //     let asp = bestPaths[x][z].aspect;
+    //     pathId.push(asp.id)
+    //   }
 
-      if (pathIds.length == 0)
-        pathIds.push(pathId)
-      else {
-        for (let z in pathIds) {
-          if (pathIds[z] == pathId) {
-            pathIds.push(pathId)
-          }
-          else {
-            duplicates.push(bestPaths[x])
-          }
-        }
-      }
+    //   pathId.sort();
+
+    //   if (pathIds.length == 0)
+    //     pathIds.push(pathId)
+    //   else {
+    //     for (let z in pathIds) {
+    //       if (pathIds[z] == pathId) {
+    //         pathIds.push(pathId)
+    //       }
+    //       else {
+    //         duplicates.push(bestPaths[x])
+    //       }
+    //     }
+    //   }
     
-    }
+    // }
 
-    bestPaths = bestPaths.filter(function(item){
-      return !duplicates.includes(item);
-    })
+    // bestPaths = bestPaths.filter(function(item){
+    //   return !duplicates.includes(item);
+    // })
 
-    console.log("Paths:")
-    console.log(bestPaths)
+    // console.log("Paths:")
+    // console.log(bestPaths)
 
-    var result = {
+    // var result = {
+    //   bestBuilds: bestBuilds,
+    //   buildPoints: bestPoints,
+    //   selfSustainPoints: bestPoints,
+    //   bestPaths: bestPaths,
+    //   pathPoints: bestPathsPoints,
+    // }
+
+    let result = {
       bestBuilds: bestBuilds,
       buildPoints: bestPoints,
-      selfSustainPoints: bestPoints,
-      bestPaths: bestPaths,
-      pathPoints: bestPathsPoints,
+      pointsNeeded: bestPoints,
     }
 
     //return result;
     this.setState({
       result: result,
       resultIndex: 0,
-    })
-  }
-
-  async calculate() {
-    // step 1: make a list of relevant aspects and gather the total embodiment requirements
-    var data = this.filterApplicableAspects(this.state.selection);
-    console.log(data.chosenAspects)
-
-    // warn if the user has excluded a lot of aspects
-    if (this.state.excluded.length >= 6)
-      if (!window.confirm("You've excluded a lot of aspects. I haven't implemented failsafes for that so if you continue, the webpage may freeze if there is literally no way to build towards the goal. Just a warnin'."))
-        return;
-
-    var bestBuild;
-
-    // quit if nothing was selected
-    if (Object.keys(data.chosenAspects).length == 0)
-      return;
-
-    // step 2: create random builds and save the most point-efficient one
-    for (var iteration = 0; iteration < this.state.iterations; iteration++) {
-      var aspects = data.aspects;
-      var chosenAspects = [] // we "shuffle" this.
-      for (var x in data.chosenAspects) {
-        chosenAspects.push(data.chosenAspects[x]);
-      }
-      shuffle(chosenAspects);
-
-      var build = [];
-
-      var availableAspects = {}; // unnecessary? we dont edit this list
-      for (var u in aspects) {
-        availableAspects[u] = aspects[u]
-      }
-
-      for (var attempts = 0; attempts < 2000; attempts++) {
-
-        // pick random aspect
-        var aspect = _.sample(availableAspects)
-        var skipRandomChoice = false;
-
-        //CHECK IF WE MEET THE REQS FOR THE PLAYER-PICKED NODES, AND IF SO, START PUTTING THOSE IN AND IGNORE THE RANDOMLY PICKED ASPECT
-        var breakThis = false;
-        for (var v in chosenAspects) {
-          if (breakThis)
-            break;
-          
-          var chosenAspect = chosenAspects[v]
-
-          if (fullfillsRequirements(build, {chosenAspect}) && !aspectAlreadyPicked(build, chosenAspect)) {
-            build.push(chosenAspect)
-
-            skipRandomChoice = true;
-
-            //console.log("picked " + chosenAspect.name + " (goal) because reqs were fulfilled")
-
-            // if one of the goals was a t2, remove the variants of it from the list of goals
-            if (chosenAspect.tier == 2) {
-              var newGoals = []
-
-              for (var z in chosenAspects) {
-                var asp = chosenAspects[z];
-                if (asp.id == chosenAspect.id && asp != chosenAspect) {
-                  //console.log("removed " + asp.name)
-                }
-                else {
-                  newGoals.push(asp);
-                }
-              }
-
-              chosenAspects = newGoals;
-
-              breakThis = true; // can we just replace this with break?
-            }
-
-            break;
-          }
-        }
-
-        if (!skipRandomChoice) {
-          // choose it if we can and if we dont already have it in some way (relevant for t2s)
-          if (fullfillsRequirements(build, {aspect}) && !aspectAlreadyPicked(build, aspect)) {
-            build.push(aspect)
-
-            //console.log("picked " + aspect.name)
-          }
-        }
-
-        // check if we got all the nodes we wanted
-        var allChosenNodesObtained = false;
-        for (var n in chosenAspects) {
-          if (!build.includes(chosenAspects[n])) {
-            allChosenNodesObtained = false;
-            break;
-          }
-
-          allChosenNodesObtained = true;
-        }
-
-        // self-sustaining
-        // TODO MAKE IT TRY TO REMOVE THE MOST COSTLY ONES FIRST - to do this, first make an ordered list of aspects from most costly to cheapest
-        var aspectsToRemove = [];
-        var filteredBuild = build;
-        if (allChosenNodesObtained && this.state.selfSustain) {
-          // for (var x = 0; x < build.length; x++) {
-          //   var asp = build[x];
-          //   var buildWithoutThat = filteredBuild.filter(function(val) {return val != asp });
-
-          //   if (fullfillsRequirements(buildWithoutThat) && !isInObject(asp, data.chosenAspects) && filteredBuild.includes(asp)) {
-          //     aspectsToRemove.push(asp);
-          //     filteredBuild = filteredBuild.filter(function(val) {return val != asp });
-          //   }
-          // }
-
-          for (var x = build.length; x >= 0; x--) {
-            var asp = build[x];
-            var earliestTimeToRemove = null;
-            if (!isInObject(asp, data.chosenAspects)) { // are we checking the right thing here?
-              var buildWithoutThat = filteredBuild.filter(function(val) {return val != asp });
-              for (var z = build.length; z >= 0; z--) {
-                if (fullfillsRequirements(buildWithoutThat) && filteredBuild.includes(asp)) {
-                  aspectsToRemove.push({
-                    aspect: asp,
-                    time: z});
-                  filteredBuild = filteredBuild.filter(function(val) {return val != asp });
-                }
-              }
-            }
-          }
-        }
-
-        // break if we finished picking aspects for this build
-        if (allChosenNodesObtained)
-          break;
-      }
-
-      // < ! > Sometimes a build comes up with 0 aspects and points. I assume this happens when the find-aspects loop has finished and somehow, miraculously, all attempts to find a starting point for the build have failed.
-      if (build.length != 0) {
-        console.log(build);
-        var pathOperationOrder = GetPathOperationOrder(build, aspectsToRemove)
-        //var pointsToReach = GetMinimumPoints(pathOperationOrder);
-        var pointsToReach = getTotalPoints(build)
-        var pointsToSustain = getTotalPoints(filteredBuild)
-
-        var buildInfo = {
-          aspects: build,
-          aspectsToRemove: aspectsToRemove,
-          pathOperationOrder: pathOperationOrder,
-          points: pointsToReach,
-          finalCost: pointsToSustain,
-          score: pointsToReach + pointsToSustain + ((this.state.preference == "0") ? 0 : build.length), // less aspects = better, discourages needlessly picking builds only to despec them later
-          totalEmbodiments: getTotalRewards(build),
-        }
-
-        // check if new build is more point-efficient or tied, in which case we keep both tracked
-        if (bestBuild == undefined)
-          bestBuild = buildInfo;
-        else if (buildInfo.score < bestBuild.score && buildInfo.points <= this.state.pointsBudget) // favoring only finalCost doesnt really work, it picks 50-point builds
-          bestBuild = buildInfo;
-      }
-    }
-
-    console.log("--- Best Build ---")
-    console.log(bestBuild);
-
-    this.setState({
-      result: bestBuild,
-      waiting: false,
     })
   }
 
@@ -922,6 +970,103 @@ class App extends React.Component {
     })
   }
 
+  run() {
+    switch (this.state.mode) {
+      case "fastest": {
+        this.calculateShortestPath();
+        break;
+      }
+      case "self-sustain": {
+        this.calculateV2();
+        break;
+      }
+      case "minmaxembodiments": {
+        this.calculateMaxEmbs();
+        break;
+      }
+    }
+  }
+
+  renderResults() {
+    if (this.state.result == null)
+      return null;
+    
+    var text = [];
+    if (this.state.mode == "fastest") {
+      let header = ((this.state.result.bestBuilds.length > 1) ? "{0} paths found" : "{0} path found").format(this.state.result.bestBuilds.length) + " ({0} points needed, {1} to sustain)".format(this.state.result.bestBuilds[this.state.resultIndex].maxPoints, this.state.result.bestBuilds[this.state.resultIndex].points)
+
+      var resultsPanel = <div className="flexbox-horizontal">
+        {(this.state.result.bestBuilds.length > 1) ? <button className="arrow-button" onClick={() => this.changeIndex(1)}>{"<"}</button> : null}
+        <p className={this.textClass}>{header}</p>
+        {(this.state.result.bestBuilds.length > 1) ? <button className="arrow-button" onClick={() => this.changeIndex(-1)}>{">"}</button> : null}
+      </div>
+
+      var path = this.state.result.bestBuilds[this.state.resultIndex].path;
+      let darkModeClass = this.state.darkMode ? "-dark-mode" : ""
+
+      for (let x in path) {
+        let element = path[x];
+
+        switch(element.role) {
+          case "goal": {
+            text.push(<p className={"result-goal" + darkModeClass} key={x}>{element.aspect.name}</p>)
+            break;
+          }
+          case "removable-removed":
+          case "removable": {
+            text.push(<p className={"result-removable" + darkModeClass} key={x}>{element.aspect.name}</p>)
+            break;
+          }
+          case "remove": {
+            text.push(<p className={"result-removable" + darkModeClass} key={x}>{"❌ " + element.aspect.name}</p>)
+            break;
+          }
+          case "key": {
+            text.push(<p className={"result-key" + darkModeClass} key={x}>{element.aspect.name}</p>)
+            break;
+          }
+        }
+
+        if (x != path.length - 1)
+          text.push(<p className={"result-arrow" + darkModeClass} key={-x-1}>{" -> "}</p>)
+      }
+
+      return <div>
+        <div>{resultsPanel}</div>
+        <div className="flexbox-horizontal">{text}</div>
+      </div>;
+    }
+    else if (this.state.mode == "self-sustain") {
+      let header = ((this.state.result.bestBuilds.length > 1) ? "{0} builds found" : "{0} build found").format(this.state.result.bestBuilds.length) + " ({0} points to sustain)".format(this.state.result.buildPoints)
+
+      let elements = []
+
+      var resultsPanel = <div className="flexbox-horizontal">
+        {(this.state.result.bestBuilds.length > 1) ? <button className="arrow-button" onClick={() => this.changeIndex(1)}>{"<"}</button> : null}
+        <p className={this.textClass}>{header}</p>
+        {(this.state.result.bestBuilds.length > 1) ? <button className="arrow-button" onClick={() => this.changeIndex(-1)}>{">"}</button> : null}
+      </div>
+
+      let build = this.state.result.bestBuilds[this.state.resultIndex];
+
+      for (let x in build) {
+        elements.push(<p className={this.textClass + " result-goal"}>{build[x].name}</p>)
+
+        if (x != build.length - 1)
+          elements.push(<p className={this.textClass} style={{marginRight: "5px"}}>, </p>)
+      }
+
+      return <div>
+        {resultsPanel}
+        <div className="flexbox-horizontal">{elements}</div>
+        <div className="flexbox-horizontal">{text}</div>
+      </div>;
+    }
+  }
+
+  get textClass() {return (this.state.darkMode) ? "dark-mode-text" : ""}
+  get checkboxClass() {return (this.state.darkMode) ? "dark-mode-checkbox" : ""}
+
   render() {
     var forceAspects = [];
     var entropyAspects = [];
@@ -929,13 +1074,9 @@ class App extends React.Component {
     var inertiaAspects = [];
     var lifeAspects = [];
 
-    // dark mode
-    let textClass = ""
-    let checkboxClass = ""
+    // dark mode bg
     if (this.state.darkMode) {
       document.getElementsByTagName("body")[0].classList = "dark-bg"
-      textClass += "dark-mode-text"
-      checkboxClass += "dark-mode-checkbox"
     }
     else {
       document.getElementsByTagName("body")[0].classList = ""
@@ -1020,7 +1161,7 @@ class App extends React.Component {
 
       let reqEmbs = []
       let rewEmbs = []
-      let pointsText = <p className={textClass} style={{marginLeft: "0px"}}>{", nodes: {0}".format(nodes)}</p>
+      let pointsText = <p className={this.textClass} style={{marginLeft: "0px"}}>{", nodes: {0}".format(nodes)}</p>
       var key = 0;
 
       for (let x in reqs) {
@@ -1033,12 +1174,12 @@ class App extends React.Component {
         key++;
       }
       if (reqEmbs.length == 0) {
-        reqEmbs.push(<p className={textClass} style={{marginLeft: "5px"}}>none</p>)
+        reqEmbs.push(<p className={this.textClass} style={{marginLeft: "5px"}}>none</p>)
       }
 
       for (let x in rewards) {
         if (x == "any") {
-          rewEmbs.push(<p key={key} className={textClass}>{", {0} any".format(rewards[x])}</p>)
+          rewEmbs.push(<p key={key} className={this.textClass}>{", {0} any".format(rewards[x])}</p>)
         }
         else {
           rewEmbs.push(<Embodiment
@@ -1051,59 +1192,19 @@ class App extends React.Component {
         key++;
       }
       if (rewEmbs.length == 0) {
-        rewEmbs.push(<p className={textClass} style={{marginLeft: "5px"}}>none.</p>)
+        rewEmbs.push(<p className={this.textClass} style={{marginLeft: "5px"}}>none.</p>)
       }
 
       requirementsInfo = <div className="flexbox-horizontal">
-        <p className={textClass}>{"Requirements of chosen aspects: "}</p>
+        <p className={this.textClass}>{"Requirements of chosen aspects: "}</p>
         {reqEmbs}
-        <p className={textClass}>{", rewards:"}</p>
+        <p className={this.textClass}>{", rewards:"}</p>
         {rewEmbs}
         {pointsText}
       </div>
     }
 
-    var text = [];
-    if (this.state.result != null) {
-      let header = ((this.state.result.bestPaths.length > 1) ? "{0} paths found" : "{0} path found").format(this.state.result.bestPaths.length) + " ({0} points to sustain)".format(this.state.result.buildPoints)
-
-      var resultsPanel = <div className="flexbox-horizontal">
-        {(this.state.result.bestPaths.length > 1) ? <button className="arrow-button" onClick={() => this.changeIndex(1)}>{"<"}</button> : null}
-        <p className={textClass}>{header}</p>
-        {(this.state.result.bestPaths.length > 1) ? <button className="arrow-button" onClick={() => this.changeIndex(-1)}>{">"}</button> : null}
-      </div>
-
-      var path = this.state.result.bestPaths[this.state.resultIndex];
-      let darkModeClass = this.state.darkMode ? "-dark-mode" : ""
-
-      for (let x in path) {
-        let element = path[x];
-
-        switch(element.role) {
-          case "goal": {
-            text.push(<p className={"result-goal" + darkModeClass} key={x}>{element.aspect.name}</p>)
-            break;
-          }
-          case "removable": {
-            text.push(<p className={"result-removable" + darkModeClass} key={x}>{element.aspect.name}</p>)
-            break;
-          }
-          case "remove": {
-            text.push(<p className={"result-removable" + darkModeClass} key={x}>{"❌ " + element.aspect.name}</p>)
-            break;
-          }
-          case "key": {
-            text.push(<p className={"result-key" + darkModeClass} key={x}>{element.aspect.name}</p>)
-            break;
-          }
-        }
-
-        if (x != path.length - 1)
-          text.push(<p className={"result-arrow" + darkModeClass} key={-x-1}>{" -> "}</p>)
-      }
-    }
-    else
-      var resultsPanel = null;
+    let resultsPanel = this.renderResults();
 
     return (
       <div>
@@ -1124,17 +1225,18 @@ class App extends React.Component {
             {lifeAspects}
           </div>
         </div>
+        {/* options buttons */}
         <div className="bottom-interface">
           <Tippy content={strings.iterations} placement="bottom" duration="0">
             <div className="num-input">
-              <p className={textClass}>Builds to try:</p>
+              <p className={this.textClass}>Builds to try:</p>
               <input type="val" value={this.state.iterations} onChange={(e) => this.setState({iterations: e.target.value})}></input>
             </div>
           </Tippy>
           <Tippy content={strings.useFullCore} placement="bottom" duration="0">
             <div className="checkbox-bottom-ui">
               <input type="checkbox" checked={this.state.useFullCore} onChange={(e) => this.setState({useFullCore: e.target.checked})}></input>
-              <p className={textClass}>Use a full Core</p>
+              <p className={this.textClass}>Use a full Core</p>
             </div>
           </Tippy>
           {/* <Tippy content={strings.considerDipping} placement="bottom" duration="0">
@@ -1143,35 +1245,25 @@ class App extends React.Component {
               <p className={textClass}>Consider dipping tier 2 aspects</p>
             </div>
           </Tippy> */}
-          {/* <Tippy content={strings.selfSustain} placement="bottom" duration="0">
-            <div className="checkbox-bottom-ui">
-              <input type="checkbox" checked={this.state.selfSustain} onChange={(e) => this.setState({selfSustain: e.target.checked})}></input>
-              <p>Self-sustain</p>
-            </div>
-          </Tippy> */}
-          <Tippy content={"Change the UI to be dark."} placement="bottom" duration="0">
+          <Tippy content={"Change the UI to be dark. This setting persists even if you refresh the page."} placement="bottom" duration="0">
           <div className="checkbox-bottom-ui">
               <input type="checkbox" checked={this.state.darkMode} onChange={(e) => {this.setState({darkMode: e.target.checked}); window.localStorage.setItem("darkMode", e.target.checked)}}></input>
-              <p className={textClass}>Dark mode</p>
+              <p className={this.textClass}>Dark mode</p>
             </div>
           </Tippy>
-          {/* <Tippy content={strings.preference} placement="bottom" duration="0">
+          <Tippy content={strings.mode} placement="bottom" duration="0">
             <div className="dropdown">
-              <select onChange={(e) => this.setState({preference: e.target.value})}>
-                <option value="0">Prefer builds with lower final cost</option>
-                <option value="1">Prefer builds with fewer points needed to reach</option>
+              <select onChange={(e) => this.setState({mode: e.target.value, result: null,})}>
+                <option value="fastest">Find shortest paths</option>
+                <option value="self-sustain">Find self-sustainable builds</option>
               </select>
             </div>
-          </Tippy> */}
+          </Tippy>
         </div>
         <div className="bottom-interface column">
           {requirementsInfo}
-          <button onClick={() => this.calculateV2()}>Search short paths</button>
-          {/* <p>{resultText}</p> */}
+          <button onClick={() => this.run()}>{(this.state.mode == "self-sustain") ? "Find self-sustained builds" : "Find shortest paths"}</button>
           {resultsPanel}
-        </div>
-        <div className="flexbox-horizontal">
-          {text}
         </div>
         <div className="source-code-link">
           <a href="https://github.com/PinewoodPip/ee2calc">Source code</a>
@@ -1223,18 +1315,6 @@ function getTotalPoints(build) {
   return points;
 }
 
-function GetMinimumPoints(path) {
-  var points = 0;
-
-  for (var x = 0; x < path.length; x++) {
-    var asp = path[x].aspect;
-    points += (path[x].operation == "add") ? asp.nodes : -asp.nodes;
-
-  }
-
-  return points;
-}
-
 function GetPathOperationOrder(build, toRemove) {
   var path = [];
 
@@ -1265,6 +1345,78 @@ function randomProp(obj) {
   return obj[keys[ keys.length * Math.random() << 0]];
 };
 
+// https://stackoverflow.com/questions/6229197/how-to-know-if-two-arrays-have-the-same-values/34566587
+// yeah I really was too lazy to write this myself
+function arraysEqual(_arr1, _arr2) {
+  if (!Array.isArray(_arr1) || ! Array.isArray(_arr2) || _arr1.length !== _arr2.length)
+    return false;
+  var arr1 = _arr1.concat().sort();
+  var arr2 = _arr2.concat().sort();
+  for (var i = 0; i < arr1.length; i++) {
+    if (arr1[i] !== arr2[i])
+      return false;
+  }
+  return true;
+}
+
+function filterDuplicateBuilds(builds) {
+  var pathIds = []
+  var duplicates = []
+  for (let x in builds) {
+    let pathId = []
+
+    for (let z in builds[x]) {
+      let asp = builds[x][z];
+      pathId.push(asp.name)
+    }
+
+    pathId.sort();
+
+    for (let z in pathIds) {
+      if (arraysEqual(pathIds[z], pathId)) {
+        duplicates.push(parseInt(pathIds.length))
+      }
+    }
+
+    pathIds.push(pathId)
+  }
+  console.log(pathIds)
+  console.log(duplicates)
+
+  return builds.filter(function(item, index){
+    return !duplicates.includes(index);
+  });
+}
+
+function filterDuplicatePaths(bestPaths) {
+  var pathIds = []
+  var duplicates = []
+  for (let x in bestPaths) {
+    let pathId = []
+
+    for (let z in bestPaths[x].build) {
+      let asp = bestPaths[x].build[z];
+      pathId.push(asp.name)
+    }
+
+    pathId.sort();
+
+    for (let z in pathIds) {
+      if (arraysEqual(pathIds[z], pathId)) {
+        duplicates.push(parseInt(pathIds.length))
+      }
+    }
+
+    pathIds.push(pathId)
+  }
+  console.log(pathIds)
+  console.log(duplicates)
+
+  return bestPaths.filter(function(item, index){
+    return !duplicates.includes(index);
+  });
+}
+
 // gets the highest requirement for each embodiment on a build
 function getTotalReqs(aspects, hideUnused=false) { // requires an array
   var embodiments = {
@@ -1274,22 +1426,6 @@ function getTotalReqs(aspects, hideUnused=false) { // requires an array
     inertia: 0,
     life: 0,
   };
-
-  // if (typeof aspects == "object") {
-  //   for (let x in aspect.requirements) {
-  //     embodiments[x] = aspect.requirements[x];
-  //   }
-  // }
-  // else {
-  //   for (var x in aspects) {
-  //     var aspect = aspects[x];
-  
-  //     for (var z in aspect.requirements) {
-  //       if (aspect.requirements[z] > embodiments[z])
-  //         embodiments[z] = aspect.requirements[z]
-  //     }
-  //   }
-  // }
 
   for (var x in aspects) {
     var aspect = aspects[x];
@@ -1348,7 +1484,7 @@ function fullfillsRequirements(build, aspect=null) {
     var embodiments = getTotalRewards(build);
     var reqs = getTotalReqs(aspect);
 
-    for (var e in reqs) {
+    for (let e in reqs) {
       if (embodiments[e] < reqs[e])
         return false;
     }
@@ -1357,13 +1493,18 @@ function fullfillsRequirements(build, aspect=null) {
   }
   else {
     var embodiments = getTotalRewards(build);
-    var reqs = getTotalReqs(build);
+    var reqs = getTotalReqs(build, false, true);
 
-    for (var e in reqs) {
+    // console.log("------")
+    // console.log(embodiments)
+    // console.log(reqs)
+
+    for (let e in reqs) {
       if (embodiments[e] < reqs[e])
         return false;
     }
 
+    // console.log("yep")
     return true;
   }
 }
@@ -1377,6 +1518,86 @@ function aspectAlreadyPicked(build, aspect) {
   return false;
 }
 
-export default App;
+function getRelevantEmbs(build, goalBuild) {
+  let reqs = getTotalReqs(goalBuild)
+  let current = getTotalRewards(build)
 
-// serity pls come back, we miss you :(
+  for (let x in current) {
+    reqs[x] -= current[x]
+    if (reqs[x] < 0) {
+      reqs[x] = 0;
+    }
+  }
+
+  let relevant = []
+  for (let x in reqs) {
+    if (reqs[x] > 0) {
+      relevant.push(x)
+    }
+  }
+
+  return relevant;
+}
+
+// why does this discount ? error?
+function getRemainingReqs(build, deleteUnused=false) {
+  let reqs = getTotalReqs(build);
+
+  for (let x in build) {
+    let asp = build[x]
+    for (let z in asp.rewards) {
+      reqs[z] -= asp.rewards[z];
+    }
+  }
+
+  if (deleteUnused) {
+    for (let x in reqs) {
+      if (reqs[x] < 1) {
+        delete reqs[x]
+      }
+    }
+  }
+
+  return reqs;
+}
+
+function getRemainingReqs2(build, goal, deleteUnused=false) {
+  let reqs = getTotalReqs(goal);
+  let current = getTotalRewards(build)
+
+  for (let x in current) {
+    reqs[x] -= current[x];
+    if (reqs[x] < 0)
+      reqs[x] = 0;
+  }
+
+  if (deleteUnused) {
+    for (let x in reqs) {
+      if (reqs[x] < 1) {
+        delete reqs[x]
+      }
+    }
+  }
+
+  return reqs;
+}
+
+function hasRelevantRewards(asp, reqs) {
+  for (let x in reqs) {
+    if (asp.rewards[x] != undefined) {
+      if (asp.rewards[x] > 0)
+        return true;
+    }
+  }
+  return false;
+}
+
+function includesAspect(build, asp) {
+  for (let x in build) {
+    if (build[x].id == asp.id)
+      return true;
+  }
+  return false;
+}
+
+export default App;
