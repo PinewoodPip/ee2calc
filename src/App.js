@@ -6,7 +6,7 @@ import 'tippy.js/dist/tippy.css';
 import { aspects } from "./Data.js" // ascension data goes there
 
 // Hey
-// Relevant code is in filterApplicableAspects(), calculateShortestPath() and calculateV2() for the self-fuelling.
+// Relevant code is in filterApplicableAspects(), calculateShortestPath(), minMaxEmbodiments() and calculateV2() for the self-fuelling.
 // Whole thing is a mess atm; took me quite a lot of tinkering to get things working and I haven't cleaned up the code since. My apologies.
 
 const strings = {
@@ -15,7 +15,7 @@ const strings = {
   selfSustain: "If enabled, shows aspects which can be removed after completing the chosen aspects.",
   preference: "Controls the scoring system for builds. The first option will make the search favor builds which require less points to sustain after removing all unnecessary aspects. The second option favors paths which require the least amount of points to reach, but may require more points to sustain.",
   considerDipping: "If enabled, the search will include the possibility of 'dipping' into a tier 2 aspects to get the embodiment reward on their second node, for only 2 points. This is rarely ever useful for finding shortest paths. If you're using this, you should increase the 'builds to try' setting considerably.",
-  mode: "'Find shortest paths' gives you paths towards your chosen aspects that require the least amount of points to complete. 'Self-sustain' mode instead gives you a list of other aspects you need to pick in order to self-sustain the ones you chose, using the least amount of Ascension Points possible."
+  mode: "'Find shortest paths' gives you paths towards your chosen aspects that require the least amount of points to complete. 'Self-sustain' mode instead gives you a list of other aspects you need to pick in order to self-sustain the ones you chose, using the least amount of Ascension Points possible. 'Maximize Embodiments' gives you self-sustained builds that have the most amount of your chosen embodiments."
 }
 
 String.prototype.format = function () { // by gpvos from stackoverflow
@@ -81,6 +81,28 @@ class Checkbox extends React.Component {
       <div className={"unselectable " + state + " " + (this.props.darkMode ? "dark-mode-checkbox" : "")} onClick={onClick}>
         <p>{text}</p>
       </div>
+    )
+  }
+}
+
+// element for choosing your desired embodiments for the minmax-embodiments mode
+class EmbodimentSelector extends React.Component {
+  render() {
+    // new object to replace the state one
+    // changing nested objects in states is not really supported so this is a workaround
+    let embs = {
+      force: this.props.app.state.minMaxEmbodiments.force,
+      entropy: this.props.app.state.minMaxEmbodiments.entropy,
+      form: this.props.app.state.minMaxEmbodiments.form,
+      inertia: this.props.app.state.minMaxEmbodiments.inertia,
+      life: this.props.app.state.minMaxEmbodiments.life,
+    }
+    embs[this.props.type] = !this.props.app.state.minMaxEmbodiments[this.props.type]
+
+    return (<div className="flexbox-horizontal">
+      <input type="checkbox" checked={this.props.app.state.minMaxEmbodiments[this.props.type]} onChange={(e) => this.props.app.setState({minMaxEmbodiments: embs})}></input>
+      <p className={this.props.app.state.darkMode ? "dark-mode-text" : ""}>{this.props.text}</p>
+    </div>
     )
   }
 }
@@ -188,6 +210,14 @@ class App extends React.Component {
       resultIndex: 0, // currently displayed result index
       darkMode: false,
       mode: "fastest",
+      minMaxEmbodiments: {
+        force: false,
+        entropy: false,
+        form: false,
+        inertia: false,
+        life: false,
+      },
+      maxPoints: 26,
     }
 
     // dark mode is saved between sessions
@@ -207,6 +237,16 @@ class App extends React.Component {
     this.setState({
       resultIndex: current,
     })
+  }
+
+  // gets a list of the selected embodiments for the minmax-embodiments mode
+  getMinMaxEmbodiments() {
+    let list = []
+    for (let x in this.state.minMaxEmbodiments) {
+      if (this.state.minMaxEmbodiments[x])
+        list.push(x)
+    }
+    return list;
   }
 
   filterApplicableAspects(list) { // list is chosen aspects
@@ -234,21 +274,6 @@ class App extends React.Component {
       }
       else
         realList.push(aspect); 
-
-      // we dont split t2s up here anymore
-
-      // if (aspect.tier == 2) {
-      //   for (var z in aspects) {
-      //     var asp = aspects[z];
-
-      //     if (asp.id == aspect.id && asp.generated == true) {
-      //       realList.push(asp);
-      //     }
-      //   }
-      // }
-      // else {
-      //   realList.push(aspect);
-      // }
     }
 
     // add the full core to the list of user chosen aspects if we're using it
@@ -295,10 +320,6 @@ class App extends React.Component {
         if (aspect.dipping && !this.state.considerDipping)
           return false;
 
-        // !!! always ignore base tier 2s !!!, use only the generated versions, which have the +embodiment node considered
-        // if (aspect.tier == 2 && aspect.generated == undefined)
-        //   return false;
-
         // core handling
         if (aspect.id == "core_full" && !this.state.useFullCore)
           return false;
@@ -306,6 +327,7 @@ class App extends React.Component {
           return false;
 
         // filter out t2 variants that don't have a relevant +emb
+        // is this used anymore? TODO remove
         if (aspect.generated != undefined && reqs[aspect.extraEmbodimentType] == 0)
           return false;
 
@@ -582,11 +604,8 @@ class App extends React.Component {
           if (fullfillsRequirements(build, [chosenAsp]) && !includesAspect(build, chosenAsp)) {
             if (chosenAsp.tier == 2) {
               let relevantEmbodiments = getTotalReqs(chosenAspects, true)
-              // console.log(relevantEmbodiments)
-              // port this back to v2?
-              // checkForRemovals()
+              
               addPartialT2(chosenAsp, _.sample(Object.keys(relevantEmbodiments)))
-              // checkForRemovals(true)
             }
             else {
               build.push(chosenAsp)
@@ -622,7 +641,6 @@ class App extends React.Component {
 
           // else pick randoms
           let asp = _.sample(aspects);
-          // why didnt we have to del in the calcV2?
           let remainingReqs = getRemainingReqs2(build, chosenAspects, true);
           let relevantEmbodiments = getRelevantEmbs(build, chosenAspects)
 
@@ -652,8 +670,6 @@ class App extends React.Component {
     var bestBuilds = [];
     var bestPoints = null;
     for (let x in builds) { // filter them down to the most point-efficient ones
-      // let build = builds[x].build
-      //let pointsNeeded = getTotalPoints(build)
       let pointsNeeded = builds[x].maxPoints
 
       if (bestBuilds.length == 0) {
@@ -942,6 +958,154 @@ class App extends React.Component {
     })
   }
 
+  async minMaxEmbodiments() {
+    var data = this.filterApplicableAspects(this.state.selection);
+    data.chosenAspects = _.cloneDeep(data.chosenAspects)
+    
+    // quit if nothing was selected
+    if (Object.keys(data.chosenAspects).length == 0)
+      return;
+
+    let hasChosenAnyEmbs = false;
+    for (let x in this.state.minMaxEmbodiments) {
+      if (this.state.minMaxEmbodiments[x] == true) {
+        hasChosenAnyEmbs = true;
+        break;
+      }
+    }
+
+    // quit if user has not selected any embodiments
+    if (!hasChosenAnyEmbs) {
+      alert("You must choose at least 1 embodiment type that you want to pursue.")
+      return;
+    }
+
+    // warn if the user has excluded a lot of aspects
+    if (this.state.excluded.length >= 6)
+      if (!window.confirm("You've excluded a lot of aspects. I haven't implemented failsafes for that so if you continue, the webpage may freeze if there is literally no way to build towards the goal. Just a warnin'."))
+        return;
+    
+    var reqs = getTotalReqs(data.chosenAspects);
+
+    var relevantEmbodiments = [];
+    for (let x in reqs) {
+      if (reqs[x] > 0)
+        relevantEmbodiments.push(x);
+    }
+
+    var chosenAspects = [] // we "shuffle" this.
+    var buildWithChosenAspects = [];
+    for (let x in data.chosenAspects) {
+      chosenAspects.push(data.chosenAspects[x]);
+      buildWithChosenAspects.push(data.chosenAspects[x])
+    }
+
+    var validBuilds = []; // valid self-sustainable builds
+
+    console.log(data.aspects);
+
+    // new build
+    for (let x = 0; x < this.state.iterations; x++) {
+      let chosenAspects = _.cloneDeep(buildWithChosenAspects);
+      let aspects = _.cloneDeep(data.aspects);
+      //var selfSustainBuild = [...buildWithChosenAspects]
+      var selfSustainBuild = [];
+
+      for (let x in chosenAspects) {
+        let asp = chosenAspects[x]
+        if (asp.tier == 2) {
+          let embBonus = _.sample(relevantEmbodiments)
+
+          asp.rewards[embBonus] = (asp.rewards[embBonus] == undefined) ? 1 : asp.rewards[embBonus] + 1;
+          asp.name += " (+" + embBonus + ")"
+        }
+        selfSustainBuild.push(asp);
+      }
+
+      // after we fullfill reqs, change relevant embs to just the ones chosen
+
+      for (let x = 0; x < 1000; x++) { // getting rest of aspects needed to selfsustain
+        let reqs = getRemainingReqs(selfSustainBuild);
+        if (fullfillsRequirements(selfSustainBuild)) {
+          // if we fullfill reqs, switch to amassing embodiments chosen
+          reqs = {}
+          let minmax = this.getMinMaxEmbodiments()
+          for (let x in minmax) {
+            reqs[minmax[x]] = 9999;
+          }
+        }
+
+        // check if we're done
+        if (fullfillsRequirements(selfSustainBuild) && getTotalPoints(selfSustainBuild) >= this.state.maxPoints - 2) {
+          if (getTotalPoints(selfSustainBuild) <= this.state.maxPoints) {
+            validBuilds.push(selfSustainBuild);
+          }
+          break;
+        }
+        else { // else pick random asp and check again
+          let asp = _.sample(aspects);
+
+          if (hasRelevantRewards(asp, reqs) && !includesAspect(selfSustainBuild, asp)) {
+            if (asp.tier == 2) {
+              let embBonus = _.sample(relevantEmbodiments)
+
+              if (embBonus != undefined) {
+                asp.rewards[embBonus] = (asp.rewards[embBonus] == undefined) ? 1 : asp.rewards[embBonus] + 1;
+                asp.name += " (+" + embBonus + ")"
+
+                selfSustainBuild.push(asp);
+              }
+            }
+            else {
+              selfSustainBuild.push(asp);
+            }
+          }
+        }
+      }
+    }
+
+    var bestBuilds = [];
+    var bestScore = null;
+    for (let x in validBuilds) { // filter them down to the ones with most embs
+      let build = validBuilds[x]
+      let score = 0
+      let minmax = this.getMinMaxEmbodiments()
+
+      let rews = getTotalRewards(build)
+      for (let x in minmax) {
+        score += rews[minmax[x]]
+      }
+
+      if (bestBuilds.length == 0) {
+        bestBuilds.push(build);
+        bestScore = score;
+      }
+      else if (score > bestScore) {
+        bestBuilds = [build];
+        bestScore = score;
+      }
+      else if (score == bestScore && bestBuilds.length <= this.state.maximumOutputs) {
+        bestBuilds.push(build);
+      }
+    }
+
+    console.log(bestBuilds);
+    console.log(bestScore);
+
+    bestBuilds = filterDuplicateBuilds(bestBuilds)
+
+    let result = {
+      bestBuilds: bestBuilds,
+      bestScore: bestScore,
+    }
+
+    //return result;
+    this.setState({
+      result: result,
+      resultIndex: 0,
+    })
+  }
+
   // add/remove aspects to the list of aspects we want to calculate, called by the checkboxes
   updateSelection(aspect, e) {
     var selection = this.state.selection.slice();
@@ -979,8 +1143,8 @@ class App extends React.Component {
         this.calculateV2();
         break;
       }
-      case "minmaxembodiments": {
-        this.calculateMaxEmbs();
+      case "minmax-embodiments": {
+        this.minMaxEmbodiments();
         break;
       }
     }
@@ -1061,6 +1225,49 @@ class App extends React.Component {
         <div className="flexbox-horizontal">{text}</div>
       </div>;
     }
+    else if (this.state.mode == "minmax-embodiments") {
+      let header = ((this.state.result.bestBuilds.length > 1) ? "{0} builds found:" : "{0} build found:").format(this.state.result.bestBuilds.length)
+
+      let build = this.state.result.bestBuilds[this.state.resultIndex];
+      let rews = getTotalRewards(build)
+
+      let relevantEmbs = {}
+      for (let x in this.state.minMaxEmbodiments) {
+        if (this.state.minMaxEmbodiments[x]) {
+          relevantEmbs[x] = rews[x]
+        }
+      }
+
+      // embs display
+      let embDisplay = []
+      for (let x in relevantEmbs) {
+        embDisplay.push(<Embodiment type={x} darkMode={this.state.darkMode} amount={relevantEmbs[x]}/>)
+      }
+
+      let elements = []
+
+      var resultsPanel = <div className="flexbox-horizontal">
+        {(this.state.result.bestBuilds.length > 1) ? <button className="arrow-button" onClick={() => this.changeIndex(1)}>{"<"}</button> : null}
+        <p className={this.textClass}>{header}</p>
+        {embDisplay}
+        {(this.state.result.bestBuilds.length > 1) ? <button className="arrow-button" onClick={() => this.changeIndex(-1)}>{">"}</button> : null}
+      </div>
+
+      for (let x in build) {
+        elements.push(<p className={this.textClass + " result-goal"}>{build[x].name}</p>)
+
+        if (x != build.length - 1)
+          elements.push(<p className={this.textClass} style={{marginRight: "5px"}}>, </p>)
+      }
+
+      return <div>
+        <div className="flexbox-horizontal">
+          {resultsPanel}
+        </div>
+        <div className="flexbox-horizontal">{elements}</div>
+        <div className="flexbox-horizontal">{text}</div>
+      </div>;
+    }
   }
 
   get textClass() {return (this.state.darkMode) ? "dark-mode-text" : ""}
@@ -1079,6 +1286,18 @@ class App extends React.Component {
     }
     else {
       document.getElementsByTagName("body")[0].classList = ""
+    }
+
+    // buttons to select embodiments wanted for minmax embs mode
+    let embodimentSelection = null;
+    if (this.state.mode == "minmax-embodiments") {
+      embodimentSelection = <div className="flexbox-horizontal">
+        <EmbodimentSelector app={this} type="force" text="Force"/>
+        <EmbodimentSelector app={this} type="entropy" text="Entropy"/>
+        <EmbodimentSelector app={this} type="form" text="Form"/>
+        <EmbodimentSelector app={this} type="inertia" text="Inertia"/>
+        <EmbodimentSelector app={this} type="life" text="Life"/>
+      </div>
     }
 
     // aspect elements
@@ -1255,13 +1474,15 @@ class App extends React.Component {
               <select onChange={(e) => this.setState({mode: e.target.value, result: null,})}>
                 <option value="fastest">Find shortest paths</option>
                 <option value="self-sustain">Find self-sustainable builds</option>
+                <option value="minmax-embodiments">Maximize Embodiments</option>
               </select>
             </div>
           </Tippy>
         </div>
         <div className="bottom-interface column">
           {requirementsInfo}
-          <button onClick={() => this.run()}>{(this.state.mode == "self-sustain") ? "Find self-sustained builds" : "Find shortest paths"}</button>
+          {embodimentSelection}
+          <button onClick={() => this.run()}>{(this.state.mode == "self-sustain") ? "Find self-sustained builds" : (this.state.mode == "fastest") ? "Find shortest paths" : "Find builds"}</button>
           {resultsPanel}
         </div>
         <div className="source-code-link">
